@@ -168,6 +168,11 @@ kbd{display:none;font-family:var(--num);font-size:11px;font-weight:600;line-heig
 .btn kbd{margin-left:6px}
 .k.hit{animation:hit .2s ease-out}
 .k.armed{box-shadow:0 0 0 3px var(--ball) inset}
+.k.ready{box-shadow:0 0 0 4px #fff inset,0 0 0 3px var(--ball);transform:translateY(-2px)}
+.kbbar{display:none}
+body.pc .kbbar.on{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--ball);color:#1b0d02;border-radius:14px;padding:12px 18px;margin-bottom:14px;font-size:16px}
+body.pc .kbbar b{font-size:18px}
+body.pc .kbbar span{font-size:14px;font-weight:600;opacity:.8}
 .jersey .pk{position:absolute;bottom:6px;right:7px;font-size:10.5px}
 body.pc .jersey .pk{position:static;grid-column:3;grid-row:2;justify-self:end}
 @keyframes hit{from{transform:scale(.93);filter:brightness(1.5)}to{transform:none;filter:none}}
@@ -338,6 +343,7 @@ details[open]>summary{margin-bottom:10px}
   <div class="board" id="board"></div>
 
   <!-- 관리자: 기록 -->
+  <div class="kbbar adm" id="kbBar" aria-live="polite"></div>
   <div class="livegrid adm">
     <div class="panel a-pl"><h4>선수 <em id="selHint"></em></h4><div class="jerseys" id="jerseys"></div></div>
     <div class="panel pad a-pd" id="pad"><div class="shots" id="shots"></div><div class="stats" id="stats"></div></div>
@@ -823,7 +829,7 @@ function renderLive(){
         <div class="st">${st.pts}점 ${st.reb}리 ${st.AST}어</div></button>`;
     }).join('');
     const sp = sel != null ? playerOf(sel) : null;
-    $('selHint').textContent = keyBuf ? `번호 ${keyBuf}_ 입력 중` : sp ? (pend ? `#${sp.no} ${shotName(pend)} 시도 → + 성공 / − 실패` : `#${sp.no} ${sp.name} 선택됨`) : (document.body.classList.contains('pc') ? '키패드로 번호 두 자리 (예: 07)' : '먼저 선수를 누르세요');
+    $('selHint').textContent = ready ? `${ready.label} — Shift로 기록` : keyBuf ? `번호 ${keyBuf}_ 입력 중` : sp ? (pend ? `#${sp.no} ${shotName(pend)} 시도 → + 성공 / − 실패` : `#${sp.no} ${sp.name} 선택됨`) : (document.body.classList.contains('pc') ? '키패드로 번호 두 자리 (예: 07)' : '먼저 선수를 누르세요');
     $('pad').classList.toggle('off', sel == null);
     const types = [...shotVals().map(v => ({ v, ft:0, l:v + '점' })), { v:1, ft:1, l:'자유투' }];
     $('shots').innerHTML =
@@ -834,6 +840,13 @@ function renderLive(){
       `<button class="k osm" data-afoul="1"><kbd>Space</kbd>파울</button><button class="k osm" data-tout="A">타임아웃</button>`;
     $('oppTitle').textContent = (s.away || '상대팀') + ' — 선수 선택 없이 숫자키';
     $('keyHelp').innerHTML = keyHelpHTML();
+    if (ready){ const rb = document.querySelector(ready.q); if (rb) rb.classList.add('ready'); }
+    const kb = $('kbBar');
+    kb.classList.toggle('on', !!(ready || keyBuf || pend || sel != null));
+    kb.innerHTML = ready ? `<b>${esc(ready.label)}</b><span>Shift 를 누르면 기록 · Esc 취소</span>`
+      : keyBuf ? `<b>선수 번호 ${esc(keyBuf)}_</b><span>키패드로 한 자리 더</span>`
+      : pend && sp ? `<b>#${esc(sp.no)} ${esc(sp.name)} · ${shotName(pend)} 시도</b><span>+ 성공 / − 실패</span>`
+      : sp ? `<b>#${esc(sp.no)} ${esc(sp.name)}</b><span>1·2·3 슛 · ↑↓ 리바 · Q W E R · Space 파울</span>` : '';
     if (document.body.classList.contains('pc') && !$('liveBoxD').dataset.touched) $('liveBoxD').open = true;
     $('logA').innerHTML = logHTML(true);
     if ($('liveBoxD').open) $('liveBoxA').innerHTML = boxHTML();
@@ -867,7 +880,7 @@ function add(e){
   e.id = newEventId(); e.dev = DEV; e.p = G.period;
   if (e.ft === undefined) delete e.ft;
   G.events.push(e);
-  pushEvent(G, e); vib(); keyBuf = ''; pend = null;
+  pushEvent(G, e); vib(); keyBuf = ''; pend = null; ready = null;
   if (e.k === 'shot' && e.made && is3()){ const h = score('H'), a = score('A'); if ((bH < 21 && h >= 21) || (bA < 21 && a >= 21)) toast('21점 도달 — 경기 종료!'); }
   if (isFoul(e)){
     const tf = teamFouls(e.team), who = e.team === 'H' ? '우리팀' : '상대팀';
@@ -908,7 +921,7 @@ document.addEventListener('click', ev => {
   if (d.nm){ const base = d.nm; let v = base; if (base === '예선'){ const k = gamesOf(curTour).filter(g => (g.setup.name || '').startsWith('예선')).length + 1; v = `예선 ${k}경기`; } $('addName').value = v; return; }
   if (!canWrite() || !G) return;
   if (d.per){ changePeriod(+d.per); return; }
-  if (d.pl){ const id = +d.pl; sel = sel === id ? null : id; keyBuf = ''; pend = null; vib(); renderLive(); return; }
+  if (d.pl){ const id = +d.pl; sel = sel === id ? null : id; keyBuf = ''; pend = null; ready = null; vib(); renderLive(); return; }
   if (d.shot && sel != null){ add({ team:'H', pl:sel, k:'shot', v:+d.shot, ft:d.ft === '1', made:d.made === '1' }); return; }
   if (d.stat && sel != null){ add({ team:'H', pl:sel, k:'stat', s:d.stat }); return; }
   if (d.opp){ add({ team:'A', k:'shot', v:+d.opp, ft:false, made:true }); return; }
@@ -925,7 +938,7 @@ function changePeriod(dir){
   if (dir < 0 && G.period > 1) G.period--;
   else if (dir > 0){ if (G.period >= N() && !confirm(`${plabel(G.period + 1)}을(를) 시작할까요?`)) return; G.period++; }
   else return;
-  sel = null; keyBuf = ''; pend = null; patchGame(G, { period:G.period }); renderLive(); toast(plabel(G.period));
+  sel = null; keyBuf = ''; pend = null; ready = null; patchGame(G, { period:G.period }); renderLive(); toast(plabel(G.period));
 }
 // 되돌리기: 이 기기에서 마지막으로 한 기록만 (다른 기기 기록은 건드리지 않음)
 function undo(){
@@ -934,7 +947,7 @@ function undo(){
   while (i >= 0 && G.events[i].dev && G.events[i].dev !== DEV) i--;
   if (i < 0){ toast('이 기기에서 한 기록이 없어요'); return; }
   const [e] = G.events.splice(i, 1);
-  pullEvent(G, e); vib(); sel = null; keyBuf = ''; pend = null; renderLive(); toast('되돌림: ' + desc(e));
+  pullEvent(G, e); vib(); sel = null; keyBuf = ''; pend = null; ready = null; renderLive(); toast('되돌림: ' + desc(e));
 }
 
 /* ---------- 키보드 단축키 (e.code 기준이라 한/영, NumLock 상관없이 동작) ----------
@@ -945,7 +958,7 @@ function undo(){
 */
 const STAT_KEYS = { ArrowUp:'OREB', ArrowDown:'DREB', KeyQ:'AST', KeyW:'STL', KeyE:'BLK', KeyR:'TO', Space:'PF' };
 const STAT_CAP = { OREB:'↑', DREB:'↓', AST:'Q', STL:'W', BLK:'E', TO:'R', PF:'Space' };
-let keyBuf = '', keyTimer = null, pend = null, showHelp = true;
+let keyBuf = '', keyTimer = null, pend = null, ready = null, showHelp = true;   // ready = Shift 누르면 기록될 동작
 // 위쪽 숫자 → 슛 종류 (3x3은 1 = 1점슛, 2 = 2점슛, 3 = 자유투)
 function shotOfDigit(d){
   if (is3()) return d === 1 ? { v:1, ft:false } : d === 2 ? { v:2, ft:false } : d === 3 ? { v:1, ft:true } : null;
@@ -956,7 +969,7 @@ const shotName = s => s.ft ? '자유투' : s.v + '점';
 const padCode = p => (p.no || '').length === 1 ? '0' + p.no : (p.no || '');
 function findByPad(code){ const P = G.setup.players; return P.find(p => p.no === code) || P.find(p => padCode(p) === code) || null; }
 function typePad(d){
-  clearTimeout(keyTimer); pend = null;
+  clearTimeout(keyTimer); pend = null; ready = null;
   keyBuf += d;
   if (keyBuf.length < 2){ sel = null; keyTimer = setTimeout(() => { keyBuf = ''; renderLive(); }, 2500); renderLive(); return; }
   const p = findByPad(keyBuf);
@@ -969,7 +982,7 @@ document.addEventListener('keydown', e => {
   if (e.isComposing) return;
   if (e.key === 'Escape'){
     if (sheetOpen){ e.preventDefault(); closeSheet(); return; }
-    if (view === 'live' && (sel != null || keyBuf || pend)){ sel = null; keyBuf = ''; pend = null; renderLive(); }
+    if (view === 'live' && (sel != null || keyBuf || pend || ready)){ sel = null; keyBuf = ''; pend = null; ready = null; renderLive(); }
     return;
   }
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || sheetOpen || e.altKey) return;
@@ -979,6 +992,13 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ'){ e.preventDefault(); undo(); return; }
   if (e.ctrlKey || e.metaKey) return;
   const c = e.code;
+  // Shift = 고른 동작 기록 (Shift는 + 입력에도 쓰이니 고른 게 없으면 아무 일도 안 함)
+  if (c === 'ShiftLeft' || c === 'ShiftRight'){
+    if (e.repeat || !ready) return;
+    e.preventDefault();
+    const r = ready; ready = null;
+    add(r.ev); flash(r.q); return;
+  }
   const plus = c === 'Equal' || c === 'NumpadAdd', minus = c === 'Minus' || c === 'NumpadSubtract';
   const mine = /^(Numpad|Digit)\d$/.test(c) || plus || minus || STAT_KEYS[c] || (c === 'Slash' && e.shiftKey);
   if (!mine) return;
@@ -988,29 +1008,32 @@ document.addEventListener('keydown', e => {
   if ((m = c.match(/^Numpad(\d)$/))){ typePad(m[1]); return; }
   if (keyBuf){ toast('선수 번호를 두 자리로 마저 입력하세요 (예: 07)'); keyBuf = ''; renderLive(); return; }
   if (c === 'Slash'){ showHelp = !showHelp; renderLive(); return; }
+  const stage = (ev, q, label) => { ready = { ev, q, label }; renderLive(); };
+  const who = () => { const p = playerOf(sel); return p ? `#${p.no} ${p.name}` : ''; };
   if ((m = c.match(/^Digit(\d)$/))){
     const d = +m[1];
     if (sel == null){                          // 선수 선택 없음 → 상대 득점
       if (d < 1 || d > (is3() ? 2 : 3)) return;
-      add({ team:'A', k:'shot', v:d, ft:false, made:true }); flash(`[data-opp="${d}"]`); return;
+      pend = null; stage({ team:'A', k:'shot', v:d, ft:false, made:true }, `[data-opp="${d}"]`, `${G.setup.away || '상대팀'} +${d}`); return;
     }
     const s = shotOfDigit(d); if (!s) return;
-    pend = s; renderLive(); return;           // + 또는 - 기다림
+    pend = s; ready = null; renderLive(); return;    // + 또는 - 기다림
   }
   if (plus || minus){
     if (sel == null){ needPlayer(); return; }
     if (!pend){ toast('먼저 위쪽 숫자 1·2·3으로 슛 종류를 고르세요'); return; }
-    const s = pend, made = plus; pend = null;
-    add({ team:'H', pl:sel, k:'shot', v:s.v, ft:s.ft, made });
-    flash(`[data-shot="${s.v}"][data-ft="${s.ft ? 1 : 0}"][data-made="${made ? 1 : 0}"]`); return;
+    const s = pend, made = plus;
+    stage({ team:'H', pl:sel, k:'shot', v:s.v, ft:s.ft, made }, `[data-shot="${s.v}"][data-ft="${s.ft ? 1 : 0}"][data-made="${made ? 1 : 0}"]`, `${who()} ${shotName(s)} ${made ? '성공' : '실패'}`);
+    return;
   }
   const st = STAT_KEYS[c];
   if (st){
     if (sel == null){
-      if (st === 'PF'){ add({ team:'A', k:'foul' }); flash('[data-afoul]'); } else needPlayer();
+      if (st === 'PF') stage({ team:'A', k:'foul' }, '[data-afoul]', `${G.setup.away || '상대팀'} 파울`);
+      else needPlayer();
       return;
     }
-    pend = null; add({ team:'H', pl:sel, k:'stat', s:st }); flash(`[data-stat="${st}"]`);
+    pend = null; stage({ team:'H', pl:sel, k:'stat', s:st }, `[data-stat="${st}"]`, `${who()} ${SL[st]}`);
   }
 });
 function keyHelpHTML(){
@@ -1018,14 +1041,15 @@ function keyHelpHTML(){
   if (!showHelp) return `<h4>키보드 단축키 <em>Shift+/ 로 열기</em></h4>`;
   const ex = is3() ? '2점슛' : '3점';
   return `<h4>키보드 단축키 <em>Shift+/ 로 접기</em></h4>
-    <p><b>오른쪽 키패드</b>로 선수 번호 두 자리 → <b>동작 키</b>.<br>예: 키패드 <b>2 2</b> → 위쪽 <b>${is3() ? 2 : 3}</b> → <b>+</b> = #22 ${ex} 성공 · 키패드 <b>0 7</b> → <b>Space</b> = #7 파울<br>선수 선택 없이 누르면 <b>상대팀</b> 기록이에요. Esc 선택 취소.</p>
+    <p><b>오른쪽 키패드</b>로 선수 번호 두 자리 → <b>동작 키</b> → <b>Shift</b>로 기록.<br>예: 키패드 <b>2 2</b> → 위쪽 <b>${is3() ? 2 : 3}</b> → <b>+</b> → <b>Shift</b> = #22 ${ex} 성공<br>키패드 <b>0 7</b> → <b>Space</b> → <b>Shift</b> = #7 파울<br>선수 선택 없이 누르면 <b>상대팀</b> 기록이에요. Esc 취소.</p>
     <div class="keys">
       ${is3() ? k('1', '1점슛 시도') + k('2', '2점슛 시도') + k('3', '자유투 시도') : k('1', '자유투 시도') + k('2', '2점 시도') + k('3', '3점 시도')}
       ${k('+ / −', '성공 / 실패')}
       ${k('↑', '공격리바')}${k('↓', '수비리바')}
       ${k('Q', '어시스트')}${k('W', '스틸')}
       ${k('E', '블록')}${k('R', '턴오버')}
-      ${k('Space', '파울')}${k('Ctrl+Z', '되돌리기')}
+      ${k('Space', '파울')}${k('Shift', '<b>기록 확정</b>')}
+      ${k('Ctrl+Z', '되돌리기')}${k('Esc', '취소')}
     </div>
     <p style="margin:12px 0 6px"><b>선수 선택 없이</b></p>
     <div class="keys">
