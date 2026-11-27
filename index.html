@@ -993,7 +993,7 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey) return;
   const c = e.code;
   // Shift = 고른 동작 기록 (Shift는 + 입력에도 쓰이니 고른 게 없으면 아무 일도 안 함)
-  if (c === 'ShiftLeft' || c === 'ShiftRight'){
+  if (c === 'ShiftLeft' || c === 'ShiftRight' || e.key === 'Shift'){
     if (e.repeat || !ready) return;
     e.preventDefault();
     const r = ready; ready = null;
