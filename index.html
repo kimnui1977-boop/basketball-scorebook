@@ -167,6 +167,9 @@ kbd{display:none;font-family:var(--num);font-size:11px;font-weight:600;line-heig
 .k kbd{position:absolute;top:5px;left:6px}
 .btn kbd{margin-left:6px}
 .k.hit{animation:hit .2s ease-out}
+.k.armed{box-shadow:0 0 0 3px var(--ball) inset}
+.jersey .pk{position:absolute;bottom:6px;right:7px;font-size:10.5px}
+body.pc .jersey .pk{position:static;grid-column:3;grid-row:2;justify-self:end}
 @keyframes hit{from{transform:scale(.93);filter:brightness(1.5)}to{transform:none;filter:none}}
 @media (prefers-reduced-motion:reduce){.k.hit{animation:none}}
 .keyhelp .keys{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;font-size:13.5px}
@@ -339,7 +342,7 @@ details[open]>summary{margin-bottom:10px}
     <div class="panel a-pl"><h4>선수 <em id="selHint"></em></h4><div class="jerseys" id="jerseys"></div></div>
     <div class="panel pad a-pd" id="pad"><div class="shots" id="shots"></div><div class="stats" id="stats"></div></div>
     <div class="panel a-op"><h4 id="oppTitle">상대팀</h4><div class="opp" id="opp"></div></div>
-    <div class="actrow a-ac"><button class="btn undo" id="undoBtn">↶ 되돌리기<kbd>Ctrl+Z</kbd></button><button class="btn ghost" data-tout="H">우리 타임아웃<kbd>O</kbd></button></div>
+    <div class="actrow a-ac"><button class="btn undo" id="undoBtn">↶ 되돌리기<kbd>Ctrl+Z</kbd></button><button class="btn ghost" data-tout="H">우리 타임아웃</button></div>
     <div class="panel a-lg"><h4>기록 로그</h4><div class="log" id="logA"></div></div>
     <div class="panel a-kb keyhelp" id="keyHelp"></div>
     <div class="panel a-bx"><details id="liveBoxD"><summary>박스스코어</summary><div class="tw" id="liveBoxA"></div></details></div>
@@ -815,21 +818,21 @@ function renderLive(){
     $('jerseys').innerHTML = s.players.map(p => {
       const st = pstats(p.id), out = !is3() && st.PF >= 5;
       return `<button class="jersey ${sel === p.id ? 'on' : ''} ${out ? 'out' : ''}" data-pl="${p.id}">
-        <span class="fp">${'<i></i>'.repeat(Math.min(st.PF, 5))}</span>
+        <span class="fp">${'<i></i>'.repeat(Math.min(st.PF, 5))}</span><kbd class="pk">${esc(padCode(p))}</kbd>
         <div class="n">${esc(p.no || '-')}</div><div class="nm">${esc(p.name)}</div>
         <div class="st">${st.pts}점 ${st.reb}리 ${st.AST}어</div></button>`;
     }).join('');
     const sp = sel != null ? playerOf(sel) : null;
-    $('selHint').textContent = keyBuf ? `#${keyBuf}_ 입력 중` : sp ? `#${sp.no} ${sp.name} 기록 중` : (document.body.classList.contains('pc') ? '등번호를 입력하세요' : '먼저 선수를 누르세요');
+    $('selHint').textContent = keyBuf ? `번호 ${keyBuf}_ 입력 중` : sp ? (pend ? `#${sp.no} ${shotName(pend)} 시도 → + 성공 / − 실패` : `#${sp.no} ${sp.name} 선택됨`) : (document.body.classList.contains('pc') ? '키패드로 번호 두 자리 (예: 07)' : '먼저 선수를 누르세요');
     $('pad').classList.toggle('off', sel == null);
     const types = [...shotVals().map(v => ({ v, ft:0, l:v + '점' })), { v:1, ft:1, l:'자유투' }];
     $('shots').innerHTML =
-      types.map((t,i) => `<button class="k make" data-shot="${t.v}" data-ft="${t.ft}" data-made="1"><kbd>${'QWE'[i]}</kbd>${t.l} 성공</button>`).join('') +
-      types.map((t,i) => `<button class="k miss" data-shot="${t.v}" data-ft="${t.ft}" data-made="0"><kbd>${'ASD'[i]}</kbd>${t.l} 실패</button>`).join('');
-    $('stats').innerHTML = STAT.map(([k,l]) => `<button class="k stat ${k === 'PF' ? 'pf' : ''}" data-stat="${k}"><kbd>${capOf({ stat:k })}</kbd>${l}</button>`).join('');
-    $('oppTitle').textContent = (s.away || '상대팀') + ' — 점수만 기록';
-    $('opp').innerHTML = (is3() ? [1,2] : [1,2,3]).map(v => `<button class="k o" data-opp="${v}"><kbd>${'JKL'[v-1]}</kbd>+${v}</button>`).join('') +
-      `<button class="k osm" data-afoul="1"><kbd>U</kbd>파울</button><button class="k osm" data-tout="A"><kbd>I</kbd>타임아웃</button>`;
+      types.map(t => `<button class="k make ${pend && pend.v === t.v && !!pend.ft === !!t.ft ? 'armed' : ''}" data-shot="${t.v}" data-ft="${t.ft}" data-made="1"><kbd>${digitOfShot(t.v, t.ft)} +</kbd>${t.l} 성공</button>`).join('') +
+      types.map(t => `<button class="k miss ${pend && pend.v === t.v && !!pend.ft === !!t.ft ? 'armed' : ''}" data-shot="${t.v}" data-ft="${t.ft}" data-made="0"><kbd>${digitOfShot(t.v, t.ft)} −</kbd>${t.l} 실패</button>`).join('');
+    $('stats').innerHTML = STAT.map(([k,l]) => `<button class="k stat ${k === 'PF' ? 'pf' : ''}" data-stat="${k}"><kbd>${STAT_CAP[k]}</kbd>${l}</button>`).join('');
+    $('opp').innerHTML = (is3() ? [1,2] : [1,2,3]).map(v => `<button class="k o" data-opp="${v}"><kbd>${v}</kbd>+${v}</button>`).join('') +
+      `<button class="k osm" data-afoul="1"><kbd>Space</kbd>파울</button><button class="k osm" data-tout="A">타임아웃</button>`;
+    $('oppTitle').textContent = (s.away || '상대팀') + ' — 선수 선택 없이 숫자키';
     $('keyHelp').innerHTML = keyHelpHTML();
     if (document.body.classList.contains('pc') && !$('liveBoxD').dataset.touched) $('liveBoxD').open = true;
     $('logA').innerHTML = logHTML(true);
@@ -864,7 +867,7 @@ function add(e){
   e.id = newEventId(); e.dev = DEV; e.p = G.period;
   if (e.ft === undefined) delete e.ft;
   G.events.push(e);
-  pushEvent(G, e); vib(); keyBuf = '';
+  pushEvent(G, e); vib(); keyBuf = ''; pend = null;
   if (e.k === 'shot' && e.made && is3()){ const h = score('H'), a = score('A'); if ((bH < 21 && h >= 21) || (bA < 21 && a >= 21)) toast('21점 도달 — 경기 종료!'); }
   if (isFoul(e)){
     const tf = teamFouls(e.team), who = e.team === 'H' ? '우리팀' : '상대팀';
@@ -895,6 +898,7 @@ function copy(text, what){
 /* ---------- 클릭 처리 ---------- */
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
+  if (b.matches('.k, .jersey, .undo, [data-per]')) b.blur();
   const d = b.dataset;
   if ('back' in d){ goBack(); return; }
   if (d.tour){ nav('tour', { tour:d.tour }); return; }
@@ -904,7 +908,7 @@ document.addEventListener('click', ev => {
   if (d.nm){ const base = d.nm; let v = base; if (base === '예선'){ const k = gamesOf(curTour).filter(g => (g.setup.name || '').startsWith('예선')).length + 1; v = `예선 ${k}경기`; } $('addName').value = v; return; }
   if (!canWrite() || !G) return;
   if (d.per){ changePeriod(+d.per); return; }
-  if (d.pl){ const id = +d.pl; sel = sel === id ? null : id; keyBuf = ''; vib(); renderLive(); return; }
+  if (d.pl){ const id = +d.pl; sel = sel === id ? null : id; keyBuf = ''; pend = null; vib(); renderLive(); return; }
   if (d.shot && sel != null){ add({ team:'H', pl:sel, k:'shot', v:+d.shot, ft:d.ft === '1', made:d.made === '1' }); return; }
   if (d.stat && sel != null){ add({ team:'H', pl:sel, k:'stat', s:d.stat }); return; }
   if (d.opp){ add({ team:'A', k:'shot', v:+d.opp, ft:false, made:true }); return; }
@@ -921,7 +925,7 @@ function changePeriod(dir){
   if (dir < 0 && G.period > 1) G.period--;
   else if (dir > 0){ if (G.period >= N() && !confirm(`${plabel(G.period + 1)}을(를) 시작할까요?`)) return; G.period++; }
   else return;
-  sel = null; keyBuf = ''; patchGame(G, { period:G.period }); renderLive(); toast(plabel(G.period));
+  sel = null; keyBuf = ''; pend = null; patchGame(G, { period:G.period }); renderLive(); toast(plabel(G.period));
 }
 // 되돌리기: 이 기기에서 마지막으로 한 기록만 (다른 기기 기록은 건드리지 않음)
 function undo(){
@@ -930,51 +934,42 @@ function undo(){
   while (i >= 0 && G.events[i].dev && G.events[i].dev !== DEV) i--;
   if (i < 0){ toast('이 기기에서 한 기록이 없어요'); return; }
   const [e] = G.events.splice(i, 1);
-  pullEvent(G, e); vib(); sel = null; keyBuf = ''; renderLive(); toast('되돌림: ' + desc(e));
+  pullEvent(G, e); vib(); sel = null; keyBuf = ''; pend = null; renderLive(); toast('되돌림: ' + desc(e));
 }
 
-/* ---------- 키보드 단축키 (e.code 기준이라 한/영 상관없이 동작) ---------- */
-const KEYS = {
-  KeyQ:{ shot:0, made:true }, KeyW:{ shot:1, made:true }, KeyE:{ ft:true, made:true },
-  KeyA:{ shot:0, made:false }, KeyS:{ shot:1, made:false }, KeyD:{ ft:true, made:false },
-  KeyR:{ stat:'OREB' }, KeyF:{ stat:'DREB' }, KeyT:{ stat:'AST' }, KeyG:{ stat:'STL' },
-  KeyZ:{ stat:'TO' }, KeyX:{ stat:'BLK' }, KeyC:{ stat:'PF' },
-  KeyJ:{ opp:1 }, KeyK:{ opp:2 }, KeyL:{ opp:3 }, KeyU:{ afoul:true }, KeyI:{ tout:'A' }, KeyO:{ tout:'H' },
-  BracketLeft:{ per:-1 }, BracketRight:{ per:1 }
-};
-const KEYCAP = Object.fromEntries(Object.entries(KEYS).map(([c,a]) => [JSON.stringify(a), c.replace('Key','').replace('BracketLeft','[').replace('BracketRight',']')]));
-const capOf = a => KEYCAP[JSON.stringify(a)] || '';
-let keyBuf = '', keyTimer = null, showHelp = true;
-function matchBuf(){
-  clearTimeout(keyTimer);
-  if (keyBuf){
-    const P = G.setup.players;
-    const exact = P.find(p => p.no === keyBuf);
-    const longer = P.some(p => p.no !== keyBuf && p.no.startsWith(keyBuf));
-    if (exact) sel = exact.id;
-    if (!exact && !longer){ toast(`#${keyBuf} 선수가 명단에 없어요`); keyBuf = ''; }
-    else if (!longer) keyBuf = '';                       // 하나로 정해짐
-    else keyTimer = setTimeout(() => { keyBuf = ''; renderLive(); }, 1200);   // 1 다음에 1이 더 올 수도(11)
-  }
-  renderLive();
+/* ---------- 키보드 단축키 (e.code 기준이라 한/영, NumLock 상관없이 동작) ----------
+   선수 선택: 오른쪽 키패드 두 자리 (한 자리 번호는 07처럼)
+   슛: 위쪽 숫자 1 자유투 / 2 2점 / 3 3점 → 위쪽 + 성공, - 실패
+   ↑ 공격리바  ↓ 수비리바  Q 어시스트  W 스틸  E 블록  R 턴오버  Space 파울
+   선수 선택 없이: 위쪽 1·2·3 = 상대 득점, Space = 상대 파울
+*/
+const STAT_KEYS = { ArrowUp:'OREB', ArrowDown:'DREB', KeyQ:'AST', KeyW:'STL', KeyE:'BLK', KeyR:'TO', Space:'PF' };
+const STAT_CAP = { OREB:'↑', DREB:'↓', AST:'Q', STL:'W', BLK:'E', TO:'R', PF:'Space' };
+let keyBuf = '', keyTimer = null, pend = null, showHelp = true;
+// 위쪽 숫자 → 슛 종류 (3x3은 1 = 1점슛, 2 = 2점슛, 3 = 자유투)
+function shotOfDigit(d){
+  if (is3()) return d === 1 ? { v:1, ft:false } : d === 2 ? { v:2, ft:false } : d === 3 ? { v:1, ft:true } : null;
+  return d === 1 ? { v:1, ft:true } : d === 2 ? { v:2, ft:false } : d === 3 ? { v:3, ft:false } : null;
 }
-function flash(sel){ const b = document.querySelector(sel); if (b){ b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); } }
-function runKey(a){
-  if (a.per){ changePeriod(a.per); return; }
-  if (a.opp){ if (is3() && a.opp > 2) return; add({ team:'A', k:'shot', v:a.opp, ft:false, made:true }); flash(`[data-opp="${a.opp}"]`); return; }
-  if (a.afoul){ add({ team:'A', k:'foul' }); flash('[data-afoul]'); return; }
-  if (a.tout){ add({ team:a.tout, k:'tout' }); flash(`[data-tout="${a.tout}"]`); return; }
-  if (sel == null){ toast('먼저 등번호를 누르세요'); return; }
-  if (a.stat){ add({ team:'H', pl:sel, k:'stat', s:a.stat }); flash(`[data-stat="${a.stat}"]`); return; }
-  if (a.ft){ add({ team:'H', pl:sel, k:'shot', v:1, ft:true, made:a.made }); flash(`[data-ft="1"][data-made="${a.made ? 1 : 0}"]`); return; }
-  const v = shotVals()[a.shot];
-  add({ team:'H', pl:sel, k:'shot', v, ft:false, made:a.made }); flash(`[data-shot="${v}"][data-ft="0"][data-made="${a.made ? 1 : 0}"]`);
+const digitOfShot = (v, ft) => is3() ? (ft ? 3 : v) : (ft ? 1 : v);
+const shotName = s => s.ft ? '자유투' : s.v + '점';
+const padCode = p => (p.no || '').length === 1 ? '0' + p.no : (p.no || '');
+function findByPad(code){ const P = G.setup.players; return P.find(p => p.no === code) || P.find(p => padCode(p) === code) || null; }
+function typePad(d){
+  clearTimeout(keyTimer); pend = null;
+  keyBuf += d;
+  if (keyBuf.length < 2){ sel = null; keyTimer = setTimeout(() => { keyBuf = ''; renderLive(); }, 2500); renderLive(); return; }
+  const p = findByPad(keyBuf);
+  if (p){ sel = p.id; vib(); } else { toast(`${keyBuf}번 선수가 명단에 없어요`); sel = null; }
+  keyBuf = ''; renderLive();
 }
+function flash(q){ const b = document.querySelector(q); if (b){ b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); } }
+const needPlayer = () => toast('먼저 키패드로 선수 번호를 입력하세요 (예: 07)');
 document.addEventListener('keydown', e => {
   if (e.isComposing) return;
   if (e.key === 'Escape'){
     if (sheetOpen){ e.preventDefault(); closeSheet(); return; }
-    if (view === 'live' && (sel != null || keyBuf)){ sel = null; keyBuf = ''; renderLive(); }
+    if (view === 'live' && (sel != null || keyBuf || pend)){ sel = null; keyBuf = ''; pend = null; renderLive(); }
     return;
   }
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || sheetOpen || e.altKey) return;
@@ -983,31 +978,58 @@ document.addEventListener('keydown', e => {
   if (view !== 'live' || !canWrite() || !G || G.status === 'done') return;
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ'){ e.preventDefault(); undo(); return; }
   if (e.ctrlKey || e.metaKey) return;
-  const dm = e.code.match(/^(?:Digit|Numpad)(\d)$/);
-  if (e.repeat){ if (dm || KEYS[e.code]) e.preventDefault(); return; }   // 꾹 눌러서 여러 번 들어가는 것 방지
-  if (dm){ e.preventDefault(); keyBuf = (keyBuf + dm[1]).slice(-3); matchBuf(); return; }
-  if (e.code === 'Backspace' && keyBuf){ e.preventDefault(); keyBuf = keyBuf.slice(0, -1); matchBuf(); return; }
-  if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)){ e.preventDefault(); showHelp = !showHelp; renderLive(); return; }
-  const a = KEYS[e.code]; if (!a) return;
-  e.preventDefault(); runKey(a);
+  const c = e.code;
+  const plus = c === 'Equal' || c === 'NumpadAdd', minus = c === 'Minus' || c === 'NumpadSubtract';
+  const mine = /^(Numpad|Digit)\d$/.test(c) || plus || minus || STAT_KEYS[c] || (c === 'Slash' && e.shiftKey);
+  if (!mine) return;
+  e.preventDefault();
+  if (e.repeat) return;                       // 꾹 눌러도 한 번만
+  let m;
+  if ((m = c.match(/^Numpad(\d)$/))){ typePad(m[1]); return; }
+  if (keyBuf){ toast('선수 번호를 두 자리로 마저 입력하세요 (예: 07)'); keyBuf = ''; renderLive(); return; }
+  if (c === 'Slash'){ showHelp = !showHelp; renderLive(); return; }
+  if ((m = c.match(/^Digit(\d)$/))){
+    const d = +m[1];
+    if (sel == null){                          // 선수 선택 없음 → 상대 득점
+      if (d < 1 || d > (is3() ? 2 : 3)) return;
+      add({ team:'A', k:'shot', v:d, ft:false, made:true }); flash(`[data-opp="${d}"]`); return;
+    }
+    const s = shotOfDigit(d); if (!s) return;
+    pend = s; renderLive(); return;           // + 또는 - 기다림
+  }
+  if (plus || minus){
+    if (sel == null){ needPlayer(); return; }
+    if (!pend){ toast('먼저 위쪽 숫자 1·2·3으로 슛 종류를 고르세요'); return; }
+    const s = pend, made = plus; pend = null;
+    add({ team:'H', pl:sel, k:'shot', v:s.v, ft:s.ft, made });
+    flash(`[data-shot="${s.v}"][data-ft="${s.ft ? 1 : 0}"][data-made="${made ? 1 : 0}"]`); return;
+  }
+  const st = STAT_KEYS[c];
+  if (st){
+    if (sel == null){
+      if (st === 'PF'){ add({ team:'A', k:'foul' }); flash('[data-afoul]'); } else needPlayer();
+      return;
+    }
+    pend = null; add({ team:'H', pl:sel, k:'stat', s:st }); flash(`[data-stat="${st}"]`);
+  }
 });
 function keyHelpHTML(){
-  const vs = shotVals(), k = (c, l) => `<div><kbd>${c}</kbd>${l}</div>`;
-  if (!showHelp) return `<h4>키보드 단축키 <em>? 키로 열기</em></h4>`;
-  return `<h4>키보드 단축키 <em>? 키로 접기</em></h4>
-    <p><b>등번호 숫자</b>를 치고 → <b>동작 키</b>. 예: <kbd style="display:inline-block">2</kbd><kbd style="display:inline-block">3</kbd> 그다음 <kbd style="display:inline-block">W</kbd> = #23 ${vs[1]}점 성공. Esc 선택 취소.</p>
+  const k = (c, l) => `<div><kbd>${c}</kbd>${l}</div>`;
+  if (!showHelp) return `<h4>키보드 단축키 <em>Shift+/ 로 열기</em></h4>`;
+  const ex = is3() ? '2점슛' : '3점';
+  return `<h4>키보드 단축키 <em>Shift+/ 로 접기</em></h4>
+    <p><b>오른쪽 키패드</b>로 선수 번호 두 자리 → <b>동작 키</b>.<br>예: 키패드 <b>2 2</b> → 위쪽 <b>${is3() ? 2 : 3}</b> → <b>+</b> = #22 ${ex} 성공 · 키패드 <b>0 7</b> → <b>Space</b> = #7 파울<br>선수 선택 없이 누르면 <b>상대팀</b> 기록이에요. Esc 선택 취소.</p>
     <div class="keys">
-      ${k('Q', vs[0] + '점 성공')}${k('A', vs[0] + '점 실패')}
-      ${k('W', vs[1] + '점 성공')}${k('S', vs[1] + '점 실패')}
-      ${k('E', '자유투 성공')}${k('D', '자유투 실패')}
-      ${k('R', '공격리바')}${k('F', '수비리바')}
-      ${k('T', '어시스트')}${k('G', '스틸')}
-      ${k('X', '블록')}${k('Z', '턴오버')}
-      ${k('C', '파울')}${k('O', '우리 타임아웃')}
-      ${k('J', '상대 +1')}${k('K', '상대 +2')}
-      ${is3() ? '' : k('L', '상대 +3')}${k('U', '상대 파울')}
-      ${k('I', '상대 타임아웃')}${k('[ ]', '이전·다음 쿼터')}
-      ${k('Ctrl+Z', '되돌리기')}${k('Esc', '선택 취소')}
+      ${is3() ? k('1', '1점슛 시도') + k('2', '2점슛 시도') + k('3', '자유투 시도') : k('1', '자유투 시도') + k('2', '2점 시도') + k('3', '3점 시도')}
+      ${k('+ / −', '성공 / 실패')}
+      ${k('↑', '공격리바')}${k('↓', '수비리바')}
+      ${k('Q', '어시스트')}${k('W', '스틸')}
+      ${k('E', '블록')}${k('R', '턴오버')}
+      ${k('Space', '파울')}${k('Ctrl+Z', '되돌리기')}
+    </div>
+    <p style="margin:12px 0 6px"><b>선수 선택 없이</b></p>
+    <div class="keys">
+      ${k(is3() ? '1 2' : '1 2 3', '상대 득점')}${k('Space', '상대 파울')}
     </div>`;
 }
 
