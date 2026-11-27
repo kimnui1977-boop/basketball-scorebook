@@ -1,6 +1,6 @@
 // 스코어북 서비스워커: 체육관 와이파이가 끊겨도 앱 화면이 열리게 캐시
-const CACHE = 'scorebook-v1';
-const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'scorebook-v2';
+const CORE = ['./', './index.html', './firebase-config.js', './manifest.json', './icon-192.png', './icon-512.png'];
 const CDN = /^https:\/\/(www\.gstatic\.com\/firebasejs|fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net)\//;
 
 self.addEventListener('install', e => {

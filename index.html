@@ -368,19 +368,10 @@ details[open]>summary{margin-bottom:10px}
 
 <div class="toast" id="toast" role="status"></div>
 
+<script src="firebase-config.js"></script>
 <script>
-/* =========================================================
-   Firebase 설정 — 콘솔 > 프로젝트 설정 > 내 앱 의 firebaseConfig 를 그대로 붙여넣기
-   비워두면 이 기기에만 저장되는 "로컬 모드"로 동작해요.
-   ========================================================= */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCkYQW2sovvK6oho3MO60yHuK0mTqbIB4U",
-  authDomain: "basketball-scorebook-c9a68.firebaseapp.com",
-  projectId: "basketball-scorebook-c9a68",
-  storageBucket: "basketball-scorebook-c9a68.firebasestorage.app",
-  messagingSenderId: "1061730170330",
-  appId: "1:1061730170330:web:eee31deb72587a41f3bce3"
-};
+/* Firebase 설정은 firebase-config.js 에 있어요. 그 파일이 없으면 이 기기에만 저장되는 "로컬 모드"로 동작해요. */
+const FIREBASE_CONFIG = window.FIREBASE_CONFIG || {};
 const FB_ON = !!FIREBASE_CONFIG.apiKey;
 const FB_VER = '10.12.2';
 
@@ -465,8 +456,11 @@ async function createCloud(cfg){
     subscribe(onData, onStatus){
       const got = { tournaments:null, games:null };
       const listen = col => F.onSnapshot(F.collection(db, col), { includeMetadataChanges:true }, snap => {
-        got[col] = snap.docs.map(d => d.data());
-        if (got.tournaments && got.games) onData(got.tournaments, got.games);
+        // 데이터가 실제로 바뀐 때만 화면 갱신 (서버 확인 같은 상태 변화는 연결 표시만)
+        if (got[col] === null || snap.docChanges().length){
+          got[col] = snap.docs.map(d => d.data());
+          if (got.tournaments && got.games) onData(got.tournaments, got.games);
+        }
         onStatus(snap.metadata.fromCache ? 'offline' : 'online');
       }, () => onStatus('error'));
       listen('tournaments'); listen('games');
@@ -1004,7 +998,19 @@ $('copySum').onclick = () => copy(summaryText(), '결과를');
 $('copyTsv').onclick = () => copy(boxTSV(), '박스스코어를');
 
 /* ---------- 서버 데이터 반영 ---------- */
+let lastSig = '';
+// 키 순서와 상관없이 같은 내용이면 같은 문자열 (Firestore는 키를 정렬해서 돌려줘요)
+function stable(o){
+  if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']';
+  if (o && typeof o === 'object') return '{' + Object.keys(o).filter(k => o[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + stable(o[k])).join(',') + '}';
+  return JSON.stringify(o);
+}
+const sigOf = (tours, games) => tours.map(stable).sort().join('|') + '#' + games.map(stable).sort().join('|');
 function applyRemote(tours, games){
+  // 내가 방금 저장한 내용이 되돌아온 거면 다시 그리지 않음 (탭 도중 화면이 바뀌어 터치가 씹히는 것 방지)
+  const sig = sigOf(tours, games), mine = sigOf(S.tours, S.games);
+  if (sig === lastSig || sig === mine){ lastSig = sig; return; }
+  lastSig = sig;
   S = { tours, games };
   if (G){ const fresh = S.games.find(g => g.code === G.code); if (fresh) G = fresh; else if (view === 'live' || view === 'result'){ toast('이 경기가 삭제됐어요'); G = null; restore({ v: curTour ? 'tour' : 'home', tour:curTour }); return; } }
   if (view === 'tourform' || sheetOpen === 'sh-game') return;   // 입력 중엔 화면 유지
