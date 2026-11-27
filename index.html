@@ -156,8 +156,43 @@ body.is-admin .view-only{display:none!important}
 .livetag{font-size:11px;font-weight:800;color:#fff;background:var(--foul);border-radius:4px;padding:1px 6px;letter-spacing:.04em}
 
 /* 기록 화면 배치 */
-.livegrid{display:block}
-@media (min-width:900px){.livegrid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}}
+.livegrid{display:grid;grid-template-columns:minmax(0,1fr);column-gap:16px;grid-template-areas:"pl" "pd" "op" "ac" "lg" "bx"}
+.a-pl{grid-area:pl}.a-pd{grid-area:pd}.a-op{grid-area:op}.a-ac{grid-area:ac}.a-lg{grid-area:lg}.a-bx{grid-area:bx}.a-kb{grid-area:kb;display:none}
+.actrow{display:flex;gap:10px;margin-bottom:14px}
+@media (min-width:900px){.livegrid{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);grid-template-areas:"pl op" "pd ac" "pd lg" "bx bx";align-items:start}}
+
+/* 키 안내 (컴퓨터 모드에서만 보임) */
+kbd{display:none;font-family:var(--num);font-size:11px;font-weight:600;line-height:1;padding:3px 5px;border-radius:5px;border:1px solid currentColor;opacity:.75}
+.k{position:relative}
+.k kbd{position:absolute;top:5px;left:6px}
+.btn kbd{margin-left:6px}
+.k.hit{animation:hit .2s ease-out}
+@keyframes hit{from{transform:scale(.93);filter:brightness(1.5)}to{transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.k.hit{animation:none}}
+.keyhelp .keys{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;font-size:13.5px}
+.keyhelp .keys div{display:flex;align-items:center;gap:8px}
+.keyhelp .keys kbd{display:inline-block;min-width:26px;text-align:center;opacity:1;color:var(--line);border-color:#4A6488;font-size:12.5px;padding:4px 6px}
+.keyhelp p{font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.keyhelp p b{color:var(--line)}
+
+/* ===== 컴퓨터 모드 ===== */
+body.pc .wrap{max-width:1560px}
+body.pc kbd{display:inline-block}
+body.pc .livegrid{grid-template-columns:270px minmax(0,1fr) 390px;grid-template-areas:"pl pd op" "pl pd ac" "pl kb lg" "pl bx lg";align-items:start}
+body.pc .a-kb{display:block}
+body.pc .a-pl{position:sticky;top:8px}
+body.pc .jerseys{grid-template-columns:1fr;gap:6px}
+body.pc .jersey{display:grid;grid-template-columns:52px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;text-align:left;padding:7px 12px}
+body.pc .jersey .n{grid-column:1;grid-row:1/3;font-size:30px;align-self:center}
+body.pc .jersey .nm{grid-column:2;grid-row:1;margin:0;font-size:14.5px}
+body.pc .jersey .st{grid-column:2;grid-row:2;margin:0}
+body.pc .jersey .fp{position:static;grid-column:3;grid-row:1/3;align-self:center}
+body.pc .k{height:62px;font-size:16px}
+body.pc .k.miss{height:52px}
+body.pc .board{position:static}
+body.pc .bscore{font-size:104px}
+body.pc #homeBody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px;align-items:start}
+body.pc #homeBody>.sec:only-child,body.pc #homeBody>.empty{grid-column:1/-1}
 .panel{background:var(--paint);border-radius:16px;padding:14px;margin-bottom:14px}
 .panel h4{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
 .panel h4 em{font-style:normal;color:var(--ball);font-weight:600}
@@ -237,6 +272,7 @@ details[open]>summary{margin-bottom:10px}
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#F47B20"/><path d="M2 16h28M16 2v28M6.5 6.5c4 3.5 4 15.5 0 19M25.5 6.5c-4 3.5-4 15.5 0 19" stroke="#13233A" stroke-width="1.8" fill="none"/></svg>
       <b>스코어북</b>
     </div>
+    <button class="chipbtn pcToggle">컴퓨터 모드</button>
     <button class="chipbtn" id="adminBtn">관리자 로그인</button>
   </div>
   <div class="syncbar" id="syncBar"><i></i><span></span></div>
@@ -293,23 +329,21 @@ details[open]>summary{margin-bottom:10px}
   <div class="top">
     <button class="iconbtn" data-back aria-label="뒤로">‹</button>
     <div class="ttl"><b id="liveTitle"></b><small><span class="code" id="liveCode"></span> <span id="liveTour"></span></small></div>
+    <button class="chipbtn pcToggle">컴퓨터 모드</button>
     <button class="chipbtn adm" id="editGameBtn">경기 정보</button>
   </div>
   <div class="board" id="board"></div>
 
   <!-- 관리자: 기록 -->
   <div class="livegrid adm">
-    <div>
-      <div class="panel"><h4>선수 <em id="selHint"></em></h4><div class="jerseys" id="jerseys"></div></div>
-      <div class="panel pad" id="pad"><div class="shots" id="shots"></div><div class="stats" id="stats"></div></div>
-    </div>
-    <div>
-      <div class="panel"><h4 id="oppTitle">상대팀</h4><div class="opp" id="opp"></div></div>
-      <div style="display:flex;gap:10px;margin-bottom:14px"><button class="btn undo" id="undoBtn">↶ 되돌리기</button><button class="btn ghost" data-tout="H">우리 타임아웃</button></div>
-      <div class="panel"><h4>기록 로그</h4><div class="log" id="logA"></div></div>
-    </div>
+    <div class="panel a-pl"><h4>선수 <em id="selHint"></em></h4><div class="jerseys" id="jerseys"></div></div>
+    <div class="panel pad a-pd" id="pad"><div class="shots" id="shots"></div><div class="stats" id="stats"></div></div>
+    <div class="panel a-op"><h4 id="oppTitle">상대팀</h4><div class="opp" id="opp"></div></div>
+    <div class="actrow a-ac"><button class="btn undo" id="undoBtn">↶ 되돌리기<kbd>Ctrl+Z</kbd></button><button class="btn ghost" data-tout="H">우리 타임아웃<kbd>O</kbd></button></div>
+    <div class="panel a-lg"><h4>기록 로그</h4><div class="log" id="logA"></div></div>
+    <div class="panel a-kb keyhelp" id="keyHelp"></div>
+    <div class="panel a-bx"><details id="liveBoxD"><summary>박스스코어</summary><div class="tw" id="liveBoxA"></div></details></div>
   </div>
-  <div class="panel adm"><details id="liveBoxD"><summary>박스스코어</summary><div class="tw" id="liveBoxA"></div></details></div>
 
   <!-- 보기 전용 -->
   <div class="view-only">
@@ -377,7 +411,9 @@ const FB_VER = '10.12.2';
 
 /* ---------- 기본 ---------- */
 const $ = id => document.getElementById(id);
-const LOCAL_KEY = 'bbRec_v3', MIGRATED_KEY = 'bbMigrated_v3', ADMIN_KEY = 'bbAdmin_v3';
+const LOCAL_KEY = 'bbRec_v3', MIGRATED_KEY = 'bbMigrated_v3', ADMIN_KEY = 'bbAdmin_v3', PC_KEY = 'bbPc_v3';
+const DEV = (() => { try{ let d = localStorage.getItem('bbDev'); if (!d){ d = Math.random().toString(36).slice(2, 8); localStorage.setItem('bbDev', d); } return d; }catch(e){ return Math.random().toString(36).slice(2, 8); } })();
+const newEventId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const STAT = [['OREB','공격리바'],['DREB','수비리바'],['AST','어시스트'],['STL','스틸'],['BLK','블록'],['TO','턴오버'],['PF','파울']];
 const SL = Object.fromEntries(STAT);
 const MODES = { '5v5-4':{mode:'5v5',periods:4,label:'5대5 4쿼터'}, '5v5-2':{mode:'5v5',periods:2,label:'5대5 전·후반'}, '3x3':{mode:'3x3',periods:1,label:'3x3'} };
@@ -453,6 +489,10 @@ async function createCloud(cfg){
     async logout(){ localStorage.setItem(ADMIN_KEY, ''); try{ await withTimeout(F.deleteDoc(adminRef), 8000); }catch(e){} },
     save(col, id, data){ return F.setDoc(F.doc(db, col, id), clean(data)); },
     remove(col, id){ return F.deleteDoc(F.doc(db, col, id)); },
+    // 기록 한 줄만 더하고/빼기 → 두 기기가 동시에 기록해도 서로 덮어쓰지 않음
+    addEvent(code, e){ return F.updateDoc(F.doc(db, 'games', code), { events: F.arrayUnion(clean(e)) }); },
+    removeEvent(code, e){ return F.updateDoc(F.doc(db, 'games', code), { events: F.arrayRemove(clean(e)) }); },
+    patch(code, fields){ return F.updateDoc(F.doc(db, 'games', code), clean(fields)); },
     subscribe(onData, onStatus){
       const got = { tournaments:null, games:null };
       const listen = col => F.onSnapshot(F.collection(db, col), { includeMetadataChanges:true }, snap => {
@@ -476,6 +516,11 @@ function onSaveErr(e){
 }
 function putTour(t){ upsert(S.tours, t, 'id'); if (cloud) cloud.save('tournaments', t.id, t).catch(onSaveErr); else saveLocal(); }
 function putGame(g){ upsert(S.games, g, 'code'); if (cloud) cloud.save('games', g.code, g).catch(onSaveErr); else saveLocal(); }
+function patchGame(g, fields){ if (cloud) cloud.patch(g.code, fields).catch(onSaveErr); else saveLocal(); }
+function pushEvent(g, e){ if (cloud) cloud.addEvent(g.code, e).catch(onSaveErr); else saveLocal(); }
+function pullEvent(g, e){ if (cloud) cloud.removeEvent(g.code, e).catch(onSaveErr); else saveLocal(); }
+// 서버 연결 전엔 관리자 기능을 켜지 않음 (연결 전 기록이 사라지는 것 방지)
+const canWrite = () => admin && (!FB_ON || !!cloud);
 function dropGame(code){ S.games = S.games.filter(g => g.code !== code); if (cloud) cloud.remove('games', code).catch(onSaveErr); else saveLocal(); }
 function dropTour(id){
   S.games.filter(g => g.tourId === id).forEach(g => dropGame(g.code));
@@ -648,16 +693,17 @@ $('scrim').onclick = closeSheet;
 function render(){
   ['home','tour','tourform','live','result'].forEach(v => $('v-' + v).classList.toggle('hidden', v !== view));
   ({ home:renderHome, tour:renderTour, tourform:renderTourForm, live:renderLive, result:renderResult })[view]();
+  syncWake();
 }
 function applyAdmin(){
-  document.body.classList.toggle('is-admin', admin);
+  document.body.classList.toggle('is-admin', canWrite());
   $('adminBtn').textContent = admin ? '관리자 ✓' : '관리자 로그인';
   $('adminBtn').classList.toggle('on', admin);
-  if (!admin && view === 'tourform') restore({ v: curTour ? 'tour' : 'home', tour: curTour });
+  if (!canWrite() && view === 'tourform') restore({ v: curTour ? 'tour' : 'home', tour: curTour });
   else render();
 }
 function setSync(st){
-  const m = { local:'이 기기에만 저장 중 (서버 미연결)', connecting:'서버 연결 중…', online:'실시간 연결됨', offline:'오프라인 — 연결되면 자동으로 올라가요', error:'서버 연결 실패 — 새로고침해 주세요' };
+  const m = { local:'이 기기에만 저장 중 (서버 미연결)', connecting:'서버 연결 중…', online:'실시간 연결됨', offline:'오프라인 — 연결되면 자동으로 올라가요', error:'서버 연결 실패 — 다시 연결하는 중' };
   $('syncBar').className = 'syncbar ' + st; $('syncBar').querySelector('span').textContent = m[st];
 }
 
@@ -694,14 +740,15 @@ function renderHome(){
     if (gs.length) html += `<div class="sec"><h2>경기</h2><div class="list">${gs.map(g => gameRow(g, true)).join('')}</div></div>`;
     if (!html) html = `<div class="empty"><b>검색 결과가 없어요</b>코드 6자리나 팀 이름으로 다시 찾아보세요.</div>`;
   } else {
-    const live = S.games.filter(g => g.status !== 'done').sort(byRecent);
+    const yest = (() => { const d = new Date(Date.now() - 864e5); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+    const live = S.games.filter(g => g.status !== 'done' && (g.setup.date || '') >= yest).sort(byRecent);
     if (live.length) html += `<div class="sec"><h2>지금 진행 중</h2><div class="list">${live.map(g => gameRow(g, true)).join('')}</div></div>`;
     const tours = [...S.tours].sort((a,b) => {
       const la = gamesOf(a.id)[0], lb = gamesOf(b.id)[0];
       return ((lb && lb.setup.date) || '').localeCompare((la && la.setup.date) || '') || (b.created||0) - (a.created||0);
     });
     if (tours.length) html += `<div class="sec"><h2>대회</h2><div class="list">${tours.map(tourRow).join('')}</div></div>`;
-    if (!html) html = admin
+    if (!html) html = canWrite()
       ? `<div class="empty"><b>아직 대회가 없어요</b>아래 '새 대회 만들기'로 시작하세요.</div>`
       : `<div class="empty"><b>아직 기록된 경기가 없어요</b>기록 담당은 오른쪽 위 관리자 로그인을 눌러 주세요.</div>`;
   }
@@ -716,7 +763,7 @@ function renderTour(){
   const r = recordOf(t.id), gs = gamesOf(t.id);
   $('tourRecord').innerHTML = recText(r) ? `전적 <b>${recText(r)}</b>` : '';
   $('tourGames').innerHTML = gs.map(g => gameRow(g, false)).join('') ||
-    `<div class="empty"><b>아직 경기가 없어요</b>${admin ? "아래 '경기 추가'를 눌러 첫 경기를 기록하세요." : ''}</div>`;
+    `<div class="empty"><b>아직 경기가 없어요</b>${canWrite() ? "아래 '경기 추가'를 눌러 첫 경기를 기록하세요." : ''}</div>`;
 }
 
 /* 대회 만들기 / 설정 */
@@ -755,7 +802,7 @@ function renderBoard(){
   };
   $('board').innerHTML = side('H') +
     `<div class="bmid">${G.status !== 'done' ? '<span class="livetag">LIVE</span>' : ''}<div class="per">${plabel(G.period)}</div>
-      <div class="arrows adm"><button data-per="-1" aria-label="이전 쿼터">‹</button><button data-per="1" aria-label="다음 쿼터">›</button></div></div>` +
+      <div class="arrows adm"><button data-per="-1" aria-label="이전 쿼터" title="[ 키">‹</button><button data-per="1" aria-label="다음 쿼터" title="] 키">›</button></div></div>` +
     side('A');
 }
 function renderLive(){
@@ -764,7 +811,7 @@ function renderLive(){
   $('liveTitle').textContent = `${s.name || '경기'} vs ${s.away || '상대팀'}`;
   $('liveCode').textContent = '#' + G.code; $('liveTour').textContent = s.tour;
   renderBoard();
-  if (admin){
+  if (canWrite()){
     $('jerseys').innerHTML = s.players.map(p => {
       const st = pstats(p.id), out = !is3() && st.PF >= 5;
       return `<button class="jersey ${sel === p.id ? 'on' : ''} ${out ? 'out' : ''}" data-pl="${p.id}">
@@ -773,16 +820,18 @@ function renderLive(){
         <div class="st">${st.pts}점 ${st.reb}리 ${st.AST}어</div></button>`;
     }).join('');
     const sp = sel != null ? playerOf(sel) : null;
-    $('selHint').textContent = sp ? `#${sp.no} ${sp.name} 기록 중` : '먼저 선수를 누르세요';
+    $('selHint').textContent = keyBuf ? `#${keyBuf}_ 입력 중` : sp ? `#${sp.no} ${sp.name} 기록 중` : (document.body.classList.contains('pc') ? '등번호를 입력하세요' : '먼저 선수를 누르세요');
     $('pad').classList.toggle('off', sel == null);
     const types = [...shotVals().map(v => ({ v, ft:0, l:v + '점' })), { v:1, ft:1, l:'자유투' }];
     $('shots').innerHTML =
-      types.map(t => `<button class="k make" data-shot="${t.v}" data-ft="${t.ft}" data-made="1">${t.l} 성공</button>`).join('') +
-      types.map(t => `<button class="k miss" data-shot="${t.v}" data-ft="${t.ft}" data-made="0">${t.l} 실패</button>`).join('');
-    $('stats').innerHTML = STAT.map(([k,l]) => `<button class="k stat ${k === 'PF' ? 'pf' : ''}" data-stat="${k}">${l}</button>`).join('');
+      types.map((t,i) => `<button class="k make" data-shot="${t.v}" data-ft="${t.ft}" data-made="1"><kbd>${'QWE'[i]}</kbd>${t.l} 성공</button>`).join('') +
+      types.map((t,i) => `<button class="k miss" data-shot="${t.v}" data-ft="${t.ft}" data-made="0"><kbd>${'ASD'[i]}</kbd>${t.l} 실패</button>`).join('');
+    $('stats').innerHTML = STAT.map(([k,l]) => `<button class="k stat ${k === 'PF' ? 'pf' : ''}" data-stat="${k}"><kbd>${capOf({ stat:k })}</kbd>${l}</button>`).join('');
     $('oppTitle').textContent = (s.away || '상대팀') + ' — 점수만 기록';
-    $('opp').innerHTML = (is3() ? [1,2] : [1,2,3]).map(v => `<button class="k o" data-opp="${v}">+${v}</button>`).join('') +
-      `<button class="k osm" data-afoul="1">파울</button><button class="k osm" data-tout="A">타임아웃</button>`;
+    $('opp').innerHTML = (is3() ? [1,2] : [1,2,3]).map(v => `<button class="k o" data-opp="${v}"><kbd>${'JKL'[v-1]}</kbd>+${v}</button>`).join('') +
+      `<button class="k osm" data-afoul="1"><kbd>U</kbd>파울</button><button class="k osm" data-tout="A"><kbd>I</kbd>타임아웃</button>`;
+    $('keyHelp').innerHTML = keyHelpHTML();
+    if (document.body.classList.contains('pc') && !$('liveBoxD').dataset.touched) $('liveBoxD').open = true;
     $('logA').innerHTML = logHTML(true);
     if ($('liveBoxD').open) $('liveBoxA').innerHTML = boxHTML();
   } else {
@@ -810,11 +859,12 @@ function renderResult(){
 
 /* ---------- 기록 추가 ---------- */
 function add(e){
-  if (!admin) return;
+  if (!canWrite() || !G || G.status === 'done') return;
   const bH = score('H'), bA = score('A');
-  e.id = ++G.seq; e.p = G.period;
+  e.id = newEventId(); e.dev = DEV; e.p = G.period;
+  if (e.ft === undefined) delete e.ft;
   G.events.push(e);
-  putGame(G); vib();
+  pushEvent(G, e); vib(); keyBuf = '';
   if (e.k === 'shot' && e.made && is3()){ const h = score('H'), a = score('A'); if ((bH < 21 && h >= 21) || (bA < 21 && a >= 21)) toast('21점 도달 — 경기 종료!'); }
   if (isFoul(e)){
     const tf = teamFouls(e.team), who = e.team === 'H' ? '우리팀' : '상대팀';
@@ -852,25 +902,141 @@ document.addEventListener('click', ev => {
   if (d.copy){ const t = tourOf(d.copy); if (t){ $('tfRoster').value = t.players.map(p => `${p.no} ${p.name}`.trim()).join('\n'); if (!$('tfHome').value) $('tfHome').value = t.home; toast(`${t.name} 명단을 가져왔어요`); } return; }
   if (d.mode && b.closest('#tfMode')){ setTfMode(d.mode); return; }
   if (d.nm){ const base = d.nm; let v = base; if (base === '예선'){ const k = gamesOf(curTour).filter(g => (g.setup.name || '').startsWith('예선')).length + 1; v = `예선 ${k}경기`; } $('addName').value = v; return; }
-  if (!admin || !G) return;
-  if (d.per){
-    const dir = +d.per;
-    if (dir < 0 && G.period > 1){ G.period--; }
-    else if (dir > 0){ if (G.period >= N() && !confirm(`${plabel(G.period + 1)}을(를) 시작할까요?`)) return; G.period++; }
-    else return;
-    sel = null; putGame(G); renderLive(); toast(plabel(G.period)); return;
-  }
-  if (d.pl){ const id = +d.pl; sel = sel === id ? null : id; vib(); renderLive(); return; }
+  if (!canWrite() || !G) return;
+  if (d.per){ changePeriod(+d.per); return; }
+  if (d.pl){ const id = +d.pl; sel = sel === id ? null : id; keyBuf = ''; vib(); renderLive(); return; }
   if (d.shot && sel != null){ add({ team:'H', pl:sel, k:'shot', v:+d.shot, ft:d.ft === '1', made:d.made === '1' }); return; }
   if (d.stat && sel != null){ add({ team:'H', pl:sel, k:'stat', s:d.stat }); return; }
   if (d.opp){ add({ team:'A', k:'shot', v:+d.opp, ft:false, made:true }); return; }
   if (d.afoul){ add({ team:'A', k:'foul' }); return; }
   if (d.tout){ add({ team:d.tout, k:'tout' }); return; }
   if (d.del){
-    const e = G.events.find(x => x.id === +d.del);
-    if (e && confirm(`이 기록을 삭제할까요?\n${plabel(e.p)} ${desc(e)}`)){ G.events = G.events.filter(x => x !== e); putGame(G); renderLive(); toast('기록을 삭제했어요'); }
+    const e = G.events.find(x => String(x.id) === d.del);
+    if (e && confirm(`이 기록을 삭제할까요?\n${plabel(e.p)} ${desc(e)}`)){ G.events = G.events.filter(x => x !== e); pullEvent(G, e); renderLive(); toast('기록을 삭제했어요'); }
   }
 });
+
+function changePeriod(dir){
+  if (!canWrite() || !G) return;
+  if (dir < 0 && G.period > 1) G.period--;
+  else if (dir > 0){ if (G.period >= N() && !confirm(`${plabel(G.period + 1)}을(를) 시작할까요?`)) return; G.period++; }
+  else return;
+  sel = null; keyBuf = ''; patchGame(G, { period:G.period }); renderLive(); toast(plabel(G.period));
+}
+// 되돌리기: 이 기기에서 마지막으로 한 기록만 (다른 기기 기록은 건드리지 않음)
+function undo(){
+  if (!canWrite() || !G) return;
+  let i = G.events.length - 1;
+  while (i >= 0 && G.events[i].dev && G.events[i].dev !== DEV) i--;
+  if (i < 0){ toast('이 기기에서 한 기록이 없어요'); return; }
+  const [e] = G.events.splice(i, 1);
+  pullEvent(G, e); vib(); sel = null; keyBuf = ''; renderLive(); toast('되돌림: ' + desc(e));
+}
+
+/* ---------- 키보드 단축키 (e.code 기준이라 한/영 상관없이 동작) ---------- */
+const KEYS = {
+  KeyQ:{ shot:0, made:true }, KeyW:{ shot:1, made:true }, KeyE:{ ft:true, made:true },
+  KeyA:{ shot:0, made:false }, KeyS:{ shot:1, made:false }, KeyD:{ ft:true, made:false },
+  KeyR:{ stat:'OREB' }, KeyF:{ stat:'DREB' }, KeyT:{ stat:'AST' }, KeyG:{ stat:'STL' },
+  KeyZ:{ stat:'TO' }, KeyX:{ stat:'BLK' }, KeyC:{ stat:'PF' },
+  KeyJ:{ opp:1 }, KeyK:{ opp:2 }, KeyL:{ opp:3 }, KeyU:{ afoul:true }, KeyI:{ tout:'A' }, KeyO:{ tout:'H' },
+  BracketLeft:{ per:-1 }, BracketRight:{ per:1 }
+};
+const KEYCAP = Object.fromEntries(Object.entries(KEYS).map(([c,a]) => [JSON.stringify(a), c.replace('Key','').replace('BracketLeft','[').replace('BracketRight',']')]));
+const capOf = a => KEYCAP[JSON.stringify(a)] || '';
+let keyBuf = '', keyTimer = null, showHelp = true;
+function matchBuf(){
+  clearTimeout(keyTimer);
+  if (keyBuf){
+    const P = G.setup.players;
+    const exact = P.find(p => p.no === keyBuf);
+    const longer = P.some(p => p.no !== keyBuf && p.no.startsWith(keyBuf));
+    if (exact) sel = exact.id;
+    if (!exact && !longer){ toast(`#${keyBuf} 선수가 명단에 없어요`); keyBuf = ''; }
+    else if (!longer) keyBuf = '';                       // 하나로 정해짐
+    else keyTimer = setTimeout(() => { keyBuf = ''; renderLive(); }, 1200);   // 1 다음에 1이 더 올 수도(11)
+  }
+  renderLive();
+}
+function flash(sel){ const b = document.querySelector(sel); if (b){ b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); } }
+function runKey(a){
+  if (a.per){ changePeriod(a.per); return; }
+  if (a.opp){ if (is3() && a.opp > 2) return; add({ team:'A', k:'shot', v:a.opp, ft:false, made:true }); flash(`[data-opp="${a.opp}"]`); return; }
+  if (a.afoul){ add({ team:'A', k:'foul' }); flash('[data-afoul]'); return; }
+  if (a.tout){ add({ team:a.tout, k:'tout' }); flash(`[data-tout="${a.tout}"]`); return; }
+  if (sel == null){ toast('먼저 등번호를 누르세요'); return; }
+  if (a.stat){ add({ team:'H', pl:sel, k:'stat', s:a.stat }); flash(`[data-stat="${a.stat}"]`); return; }
+  if (a.ft){ add({ team:'H', pl:sel, k:'shot', v:1, ft:true, made:a.made }); flash(`[data-ft="1"][data-made="${a.made ? 1 : 0}"]`); return; }
+  const v = shotVals()[a.shot];
+  add({ team:'H', pl:sel, k:'shot', v, ft:false, made:a.made }); flash(`[data-shot="${v}"][data-ft="0"][data-made="${a.made ? 1 : 0}"]`);
+}
+document.addEventListener('keydown', e => {
+  if (e.isComposing) return;
+  if (e.key === 'Escape'){
+    if (sheetOpen){ e.preventDefault(); closeSheet(); return; }
+    if (view === 'live' && (sel != null || keyBuf)){ sel = null; keyBuf = ''; renderLive(); }
+    return;
+  }
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || sheetOpen || e.altKey) return;
+  if (view === 'home' && e.key === '/'){ e.preventDefault(); $('q').focus(); return; }
+  if (view === 'tour' && canWrite() && e.code === 'KeyN' && !e.ctrlKey && !e.metaKey){ e.preventDefault(); openAddSheet(); return; }
+  if (view !== 'live' || !canWrite() || !G || G.status === 'done') return;
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ'){ e.preventDefault(); undo(); return; }
+  if (e.ctrlKey || e.metaKey) return;
+  const dm = e.code.match(/^(?:Digit|Numpad)(\d)$/);
+  if (e.repeat){ if (dm || KEYS[e.code]) e.preventDefault(); return; }   // 꾹 눌러서 여러 번 들어가는 것 방지
+  if (dm){ e.preventDefault(); keyBuf = (keyBuf + dm[1]).slice(-3); matchBuf(); return; }
+  if (e.code === 'Backspace' && keyBuf){ e.preventDefault(); keyBuf = keyBuf.slice(0, -1); matchBuf(); return; }
+  if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)){ e.preventDefault(); showHelp = !showHelp; renderLive(); return; }
+  const a = KEYS[e.code]; if (!a) return;
+  e.preventDefault(); runKey(a);
+});
+function keyHelpHTML(){
+  const vs = shotVals(), k = (c, l) => `<div><kbd>${c}</kbd>${l}</div>`;
+  if (!showHelp) return `<h4>키보드 단축키 <em>? 키로 열기</em></h4>`;
+  return `<h4>키보드 단축키 <em>? 키로 접기</em></h4>
+    <p><b>등번호 숫자</b>를 치고 → <b>동작 키</b>. 예: <kbd style="display:inline-block">2</kbd><kbd style="display:inline-block">3</kbd> 그다음 <kbd style="display:inline-block">W</kbd> = #23 ${vs[1]}점 성공. Esc 선택 취소.</p>
+    <div class="keys">
+      ${k('Q', vs[0] + '점 성공')}${k('A', vs[0] + '점 실패')}
+      ${k('W', vs[1] + '점 성공')}${k('S', vs[1] + '점 실패')}
+      ${k('E', '자유투 성공')}${k('D', '자유투 실패')}
+      ${k('R', '공격리바')}${k('F', '수비리바')}
+      ${k('T', '어시스트')}${k('G', '스틸')}
+      ${k('X', '블록')}${k('Z', '턴오버')}
+      ${k('C', '파울')}${k('O', '우리 타임아웃')}
+      ${k('J', '상대 +1')}${k('K', '상대 +2')}
+      ${is3() ? '' : k('L', '상대 +3')}${k('U', '상대 파울')}
+      ${k('I', '상대 타임아웃')}${k('[ ]', '이전·다음 쿼터')}
+      ${k('Ctrl+Z', '되돌리기')}${k('Esc', '선택 취소')}
+    </div>`;
+}
+
+/* ---------- 컴퓨터 모드 ---------- */
+const pcAuto = window.matchMedia ? window.matchMedia('(min-width:1100px) and (pointer:fine)') : { matches:false };
+function pcOn(){ const v = localStorage.getItem(PC_KEY); return v === '1' ? true : v === '0' ? false : pcAuto.matches; }
+function applyPc(){
+  const on = pcOn();
+  document.body.classList.toggle('pc', on);
+  document.querySelectorAll('.pcToggle').forEach(b => { b.textContent = on ? '컴퓨터 모드 ✓' : '컴퓨터 모드'; b.classList.toggle('on', on); });
+  if (view === 'live') renderLive();
+}
+document.addEventListener('click', ev => {
+  if (!ev.target.closest('.pcToggle')) return;
+  try{ localStorage.setItem(PC_KEY, pcOn() ? '0' : '1'); }catch(e){}
+  applyPc(); toast(pcOn() ? '컴퓨터 모드: 키보드로 기록할 수 있어요' : '터치 모드로 바꿨어요');
+});
+if (pcAuto.addEventListener) pcAuto.addEventListener('change', applyPc);
+
+/* ---------- 경기 중 화면 꺼짐 방지 ---------- */
+let wake = null;
+async function syncWake(){
+  const want = view === 'live' && canWrite() && G && G.status !== 'done' && document.visibilityState === 'visible';
+  try{
+    if (want && !wake && navigator.wakeLock){ wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
+    else if (!want && wake){ const w = wake; wake = null; await w.release(); }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange', syncWake);
 
 $('q').addEventListener('input', renderHome);
 
@@ -881,7 +1047,7 @@ $('adminBtn').onclick = async () => {
     if (!confirm('이 기기에서 관리자 로그아웃할까요?')) return;
     admin = false; applyAdmin(); if (cloud) await cloud.logout(); toast('로그아웃했어요'); return;
   }
-  if (!cloud){ toast('서버에 연결된 뒤에 로그인할 수 있어요'); return; }
+  if (!cloud){ toast('서버에 연결하는 중이에요. 잠시 뒤에 다시 눌러 주세요'); return; }
   $('pinIn').value = ''; openSheet('sh-pin'); setTimeout(() => $('pinIn').focus(), 250);
 };
 async function doLogin(){
@@ -910,7 +1076,7 @@ $('tfSave').onclick = () => {
     const renamed = t.name !== name;
     Object.assign(t, { name, home:$('tfHome').value.trim(), mode:m.mode, periods:m.periods, players });
     putTour(t);
-    if (renamed) gamesOf(t.id).forEach(g => { g.setup.tour = name; putGame(g); });
+    if (renamed) gamesOf(t.id).forEach(g => { g.setup.tour = name; patchGame(g, { 'setup.tour':name }); });
     toast('대회 설정을 저장했어요'); goBack();
   } else {
     const t = { id:newId(), name, home:$('tfHome').value.trim(), mode:m.mode, periods:m.periods, players, created:Date.now() };
@@ -974,7 +1140,7 @@ $('egSave').onclick = () => {
   const kept = s.players.filter(p => hasEv.has(p.id) && !used.has(p.id));
   if (kept.length) toast('기록이 있는 선수는 명단에서 빼지 않았어요');
   s.players = [...list, ...kept];
-  putGame(G);
+  patchGame(G, { setup:G.setup, pseq:G.pseq });
   // 새로 추가된 선수는 대회 명단에도
   const t = tourOf(G.tourId);
   if (t){ let ch = false; list.forEach(x => { if (!t.players.some(p => p.no === x.no && p.name === x.name)){ t.players.push({ no:x.no, name:x.name }); ch = true; } }); if (ch) putTour(t); }
@@ -987,13 +1153,11 @@ $('egDelete').onclick = () => {
 };
 
 /* 기록 화면 버튼 */
-$('undoBtn').onclick = () => {
-  const e = G.events.pop(); if (!e){ toast('되돌릴 기록이 없어요'); return; }
-  putGame(G); vib(); renderLive(); toast('되돌림: ' + desc(e));
-};
+$('undoBtn').onclick = undo;
+$('liveBoxD').querySelector('summary').addEventListener('click', () => { $('liveBoxD').dataset.touched = '1'; });
 $('liveBoxD').addEventListener('toggle', () => { if ($('liveBoxD').open) $('liveBoxA').innerHTML = boxHTML(); });
-$('finishBtn').onclick = () => { if (!confirm('경기를 종료하고 결과를 볼까요?')) return; G.status = 'done'; putGame(G); nav('result', { replace:true }); };
-$('reopenBtn').onclick = () => { G.status = 'live'; putGame(G); nav('live', { replace:true }); };
+$('finishBtn').onclick = () => { if (!confirm('경기를 종료하고 결과를 볼까요?')) return; G.status = 'done'; patchGame(G, { status:'done' }); nav('result', { replace:true }); };
+$('reopenBtn').onclick = () => { G.status = 'live'; patchGame(G, { status:'live' }); nav('live', { replace:true }); };
 $('copySum').onclick = () => copy(summaryText(), '결과를');
 $('copyTsv').onclick = () => copy(boxTSV(), '박스스코어를');
 
@@ -1014,8 +1178,8 @@ function applyRemote(tours, games){
   S = { tours, games };
   if (G){ const fresh = S.games.find(g => g.code === G.code); if (fresh) G = fresh; else if (view === 'live' || view === 'result'){ toast('이 경기가 삭제됐어요'); G = null; restore({ v: curTour ? 'tour' : 'home', tour:curTour }); return; } }
   if (view === 'tourform' || sheetOpen === 'sh-game') return;   // 입력 중엔 화면 유지
-  if (!admin && G && view === 'live' && G.status === 'done'){ view = 'result'; replaceTop(); }   // 보는 사람: 경기 끝나면 결과로
-  else if (!admin && G && view === 'result' && G.status !== 'done'){ view = 'live'; replaceTop(); }
+  if (!canWrite() && G && view === 'live' && G.status === 'done'){ view = 'result'; replaceTop(); }   // 보는 사람: 경기 끝나면 결과로
+  else if (!canWrite() && G && view === 'result' && G.status !== 'done'){ view = 'live'; replaceTop(); }
   render();
 }
 function migrateLocal(){
@@ -1030,19 +1194,24 @@ function migrateLocal(){
 }
 
 /* ---------- 시작 ---------- */
+let connecting = false;
+async function connect(){
+  if (cloud || connecting) return;
+  connecting = true; setSync('connecting');
+  try{ cloud = await createCloud(FIREBASE_CONFIG); }
+  catch(e){ console.error(e); connecting = false; setSync('error'); setTimeout(connect, 8000); return; }
+  connecting = false;
+  admin = await cloud.isAdmin(); applyAdmin();
+  let first = true;
+  cloud.subscribe((t, g) => { applyRemote(t, g); if (first){ first = false; migrateLocal(); } }, setSync);
+}
 async function boot(){
   history.replaceState({ v:'home' }, '');
-  if (!FB_ON){
-    S = loadLocal(); admin = true; setSync('local'); applyAdmin(); return;
-  }
-  admin = localStorage.getItem(ADMIN_KEY) === '1';
-  setSync('connecting'); applyAdmin();
-  try{
-    cloud = await createCloud(FIREBASE_CONFIG);
-    admin = await cloud.isAdmin(); applyAdmin();
-    let first = true;
-    cloud.subscribe((t, g) => { applyRemote(t, g); if (first){ first = false; migrateLocal(); } }, setSync);
-  }catch(e){ console.error(e); setSync('error'); }
+  applyPc();
+  if (!FB_ON){ S = loadLocal(); admin = true; setSync('local'); applyAdmin(); return; }
+  applyAdmin();
+  window.addEventListener('online', connect);
+  connect();
 }
 boot();
 

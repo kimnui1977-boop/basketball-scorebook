@@ -1,5 +1,5 @@
 // 스코어북 서비스워커: 체육관 와이파이가 끊겨도 앱 화면이 열리게 캐시
-const CACHE = 'scorebook-v2';
+const CACHE = 'scorebook-v3';
 const CORE = ['./', './index.html', './firebase-config.js', './manifest.json', './icon-192.png', './icon-512.png'];
 const CDN = /^https:\/\/(www\.gstatic\.com\/firebasejs|fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net)\//;
 
@@ -14,14 +14,16 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // 앱 화면: 인터넷 되면 최신, 안 되면 캐시
-  if (req.mode === 'navigate' || (url.origin === location.origin && url.pathname.endsWith('/index.html'))) {
-    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put('./index.html', c)); return r; })
-      .catch(() => caches.match('./index.html')));
+  // 이 사이트 파일: 인터넷 되면 최신, 안 되면 캐시 (업데이트가 바로 반영되게)
+  if (url.origin === location.origin) {
+    e.respondWith(fetch(req).then(r => {
+      if (r && r.ok) { const c = r.clone(); caches.open(CACHE).then(x => x.put(req.mode === 'navigate' ? './index.html' : req, c)); }
+      return r;
+    }).catch(() => caches.match(req).then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()))));
     return;
   }
   // Firebase SDK·폰트: 캐시 먼저
-  if (CDN.test(req.url) || url.origin === location.origin) {
+  if (CDN.test(req.url)) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
       if (r && (r.ok || r.type === 'opaque')) { const c = r.clone(); caches.open(CACHE).then(x => x.put(req, c)); }
       return r;
