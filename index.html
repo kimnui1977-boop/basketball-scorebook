@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13233A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>스코어북 · 농구 경기 기록</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+:root{
+  --court:#13233A;      /* 바탕: 남색 코트 */
+  --paint:#1A2E4A;      /* 면 */
+  --paint2:#22395A;     /* 올라온 면 */
+  --line:#E9EEF5;       /* 코트 라인 = 글자 */
+  --rule:rgba(233,238,245,.12);
+  --muted:#8FA3BF;
+  --ball:#F47B20;       /* 우리팀 */
+  --away:#86B8EA;       /* 상대팀 */
+  --make:#35C26B;
+  --foul:#EF5350;
+  --num:"Barlow Condensed","Pretendard Variable",sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--court)}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Noto Sans KR",sans-serif;background:var(--court);color:var(--line);min-height:100vh;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:none;background:none;cursor:pointer;touch-action:manipulation;user-select:none}
+input,select,textarea{font:inherit;color:var(--line)}
+:focus-visible{outline:2px solid var(--ball);outline-offset:2px}
+.hidden{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:14px 16px calc(110px + var(--safe-b))}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+
+/* 관리자 전용 / 보기 전용 */
+body:not(.is-admin) .adm{display:none!important}
+body.is-admin .view-only{display:none!important}
+
+/* 상단 */
+.top{display:flex;align-items:center;gap:10px;min-height:44px;margin-bottom:14px}
+.top .ttl{flex:1;min-width:0}
+.top .ttl b{display:block;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .ttl small{display:block;color:var(--muted);font-size:13px}
+.iconbtn{width:42px;height:42px;border-radius:12px;background:var(--paint);display:grid;place-items:center;font-size:18px;flex:none}
+.brand{display:flex;align-items:center;gap:10px;flex:1}
+.brand svg{width:30px;height:30px;flex:none}
+.brand b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.chipbtn{height:36px;padding:0 14px;border-radius:999px;background:var(--paint);font-size:14px;font-weight:600;color:var(--muted)}
+.chipbtn.on{background:var(--ball);color:#1b0d02}
+.code{font-family:var(--num);font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--ball)}
+.syncbar{font-size:12.5px;color:var(--muted);margin:-6px 0 12px;display:flex;align-items:center;gap:6px}
+.syncbar i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
+.syncbar.online i{background:var(--make)}
+.syncbar.offline i{background:#F2B544}
+.syncbar.error i{background:var(--foul)}
+
+/* 검색 */
+.search{position:relative;margin-bottom:18px}
+.search input{width:100%;height:50px;border-radius:14px;border:1px solid var(--rule);background:var(--paint);padding:0 16px 0 44px;font-size:16px}
+.search input::placeholder{color:var(--muted)}
+.search svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted)}
+
+/* 섹션 + 목록 (카드 대신 코트 라인으로 구분) */
+.sec{margin-bottom:22px}
+.sec h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 4px 2px}
+.list{border-top:1px solid var(--rule)}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 2px;border-bottom:1px solid var(--rule)}
+.row:active{background:rgba(255,255,255,.03)}
+.row .main{flex:1;min-width:0}
+.row .t{font-size:16.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:13px;color:var(--muted);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.row .side{text-align:right;flex:none}
+.row .side .rec{font-size:15px;font-weight:700}
+.row .side .cnt{font-size:12.5px;color:var(--muted)}
+.vs{color:var(--muted);font-weight:500;margin:0 4px}
+.sc{display:flex;align-items:baseline;gap:4px;font-family:var(--num);font-size:24px;font-weight:700;flex:none}
+.sc .h{color:var(--ball)} .sc .a{color:var(--away)} .sc i{color:var(--muted);font-style:normal;font-size:18px}
+.badge{font-size:12px;font-weight:700;border-radius:6px;padding:3px 7px;flex:none;min-width:34px;text-align:center}
+.badge.live{background:var(--foul);color:#fff}
+.badge.w{background:var(--ball);color:#1b0d02}
+.badge.l{background:var(--paint2);color:var(--muted)}
+.badge.d{background:var(--paint2);color:var(--line)}
+.empty{color:var(--muted);text-align:center;padding:42px 10px;line-height:1.7}
+.empty b{color:var(--line);display:block;font-size:16px;margin-bottom:4px}
+
+/* 하단 고정 버튼 */
+.dock{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + var(--safe-b));background:linear-gradient(transparent,var(--court) 30%);z-index:20}
+.dock .in{max-width:1180px;margin:0 auto;display:flex;gap:10px}
+.btn{height:52px;border-radius:14px;font-size:16px;font-weight:700;padding:0 18px;flex:1;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--ball);color:#1b0d02}
+.btn.ghost{background:var(--paint);color:var(--line)}
+.btn.danger{background:transparent;color:var(--foul);border:1px solid rgba(239,83,80,.35)}
+.btn:disabled{opacity:.4}
+
+/* 대회 정보 */
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px}
+.tag{font-size:13px;padding:5px 10px;border-radius:8px;background:var(--paint);color:var(--line)}
+.tag.o{background:rgba(244,123,32,.16);color:#FFB37A}
+.roster{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.roster span{font-size:13px;color:var(--muted);background:transparent;border:1px solid var(--rule);border-radius:8px;padding:4px 8px}
+.roster span b{font-family:var(--num);color:var(--line);font-size:15px;margin-right:4px}
+.recordline{font-size:14px;color:var(--muted);margin-bottom:8px}
+.recordline b{color:var(--line);font-size:16px}
+
+/* 폼 */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;background:var(--paint);border:1px solid var(--rule);border-radius:12px;padding:13px 14px;font-size:16px}
+.field textarea{min-height:180px;resize:vertical;line-height:1.6}
+.field .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
+.seg button{height:46px;border-radius:12px;background:var(--paint);border:1px solid var(--rule);font-size:14.5px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--ball);border-color:var(--ball);color:#1b0d02}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips button{height:34px;padding:0 12px;border-radius:999px;background:var(--paint2);font-size:13.5px;font-weight:600}
+.chips button:active{background:var(--ball);color:#1b0d02}
+
+/* 시트 (아래에서 올라오는 창) */
+.scrim{position:fixed;inset:0;background:rgba(5,10,20,.6);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;background:var(--paint);border-radius:22px 22px 0 0;padding:10px 18px calc(18px + var(--safe-b));transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);z-index:41;max-width:640px;margin:0 auto}
+.sheet::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--rule);margin:0 auto 14px}
+.sheet h3{font-size:19px;margin-bottom:2px}
+.sheet .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+.sheet .field input,.sheet .field textarea{background:var(--court)}
+.sheet .chips button{background:var(--court)}
+.sheet.on{transform:none}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet .acts{display:flex;gap:10px;margin-top:6px}
+@media (prefers-reduced-motion:reduce){.sheet,.scrim{transition:none}}
+
+/* ===== 스코어보드 (이 앱에서 제일 눈에 띄는 요소) ===== */
+.board{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;background:#0A1424;border:2px solid #2C4468;border-radius:18px;margin-bottom:14px;position:sticky;top:8px;z-index:10;overflow:hidden}
+.bside{padding:10px 8px 12px;text-align:center;min-width:0}
+.bname{font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bscore{font-family:var(--num);font-weight:700;font-size:clamp(58px,13vw,96px);line-height:.95;letter-spacing:-.01em}
+.bside.H .bscore{color:var(--ball);text-shadow:0 0 18px rgba(244,123,32,.35)}
+.bside.A .bscore{color:var(--away);text-shadow:0 0 18px rgba(134,184,234,.3)}
+.bmeta{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;font-size:12px;color:var(--muted)}
+.pips{display:inline-flex;gap:3px}
+.pips i{width:8px;height:8px;border-radius:50%;border:1.5px solid #4A6488}
+.pips i.f{background:#F2B544;border-color:#F2B544}
+.pips.full i.f{background:var(--foul);border-color:var(--foul)}
+.bmeta .to b{font-family:var(--num);font-size:15px;color:var(--line)}
+.bmid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 6px;border-left:1px solid #22385A;border-right:1px solid #22385A;min-width:74px}
+.per{font-family:var(--num);font-size:24px;font-weight:700;color:var(--line)}
+.bmid .arrows{display:flex;gap:6px}
+.bmid .arrows button{width:32px;height:30px;border-radius:8px;background:var(--paint2);font-size:15px}
+.livetag{font-size:11px;font-weight:800;color:#fff;background:var(--foul);border-radius:4px;padding:1px 6px;letter-spacing:.04em}
+
+/* 기록 화면 배치 */
+.livegrid{display:block}
+@media (min-width:900px){.livegrid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}}
+.panel{background:var(--paint);border-radius:16px;padding:14px;margin-bottom:14px}
+.panel h4{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.panel h4 em{font-style:normal;color:var(--ball);font-weight:600}
+
+/* 선수 = 유니폼 등번호 */
+.jerseys{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px}
+.jersey{position:relative;background:var(--court);border:2px solid transparent;border-radius:14px;padding:8px 4px 8px;text-align:center;min-width:0}
+.jersey .n{font-family:var(--num);font-size:36px;font-weight:700;line-height:1}
+.jersey .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.jersey .st{font-size:11.5px;color:var(--muted);margin-top:2px}
+.jersey .fp{position:absolute;top:6px;right:7px;display:flex;gap:2px}
+.jersey .fp i{width:5px;height:5px;border-radius:50%;background:var(--foul)}
+.jersey.on{border-color:var(--ball);background:#2B1C10}
+.jersey.on .n{color:var(--ball)}
+.jersey.out{opacity:.38}
+
+.pad.off{opacity:.3;pointer-events:none}
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.k{height:56px;border-radius:12px;font-size:15px;font-weight:700}
+.k.make{background:var(--make);color:#06210F}
+.k.miss{background:transparent;border:2px solid #3A5375;color:var(--muted);height:46px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.k.stat{background:var(--paint2);height:52px;font-size:14px;font-weight:600}
+.k.pf{background:rgba(239,83,80,.18);color:#FF9A98}
+.opp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.k.o{background:rgba(134,184,234,.14);color:var(--away);font-family:var(--num);font-size:26px;height:60px}
+.k.osm{background:var(--paint2);font-size:14px;font-weight:600;height:48px}
+.undo{background:var(--line)!important;color:var(--court)!important}
+
+/* 로그 */
+.log{max-height:360px;overflow:auto}
+.li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.li:last-child{border-bottom:none}
+.li .q{font-family:var(--num);color:var(--muted);width:34px;flex:none;font-size:14px}
+.li .d{flex:1;min-width:0}
+.li.A .d{color:var(--away)}
+.li .s{font-family:var(--num);font-size:16px;color:var(--muted)}
+.li .x{width:32px;height:32px;color:var(--muted);flex:none}
+
+/* 표 */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:9px 7px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--rule)}
+th{color:var(--muted);font-weight:600;font-size:12.5px}
+td{font-family:var(--num);font-size:16px}
+td.l,th.l{text-align:left;font-family:inherit;font-size:14px}
+tr.tot td{font-weight:700;border-bottom:none;border-top:1.5px solid var(--muted)}
+details>summary{list-style:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);display:flex;justify-content:space-between}
+details>summary::after{content:"펼치기"}
+details[open]>summary::after{content:"접기"}
+details[open]>summary{margin-bottom:10px}
+
+/* 결과 */
+.final{text-align:center;padding:18px 10px 20px}
+.final .meta{color:var(--muted);font-size:13.5px;margin-bottom:10px}
+.final .fs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.final .bscore{font-size:clamp(64px,16vw,110px)}
+.final .res{font-size:20px;font-weight:800;padding:6px 14px;border-radius:10px;background:var(--paint2)}
+.final .res.w{background:var(--ball);color:#1b0d02}
+.mvp{display:flex;align-items:center;gap:14px}
+.mvp .n{font-family:var(--num);font-size:46px;font-weight:700;color:var(--ball);line-height:1}
+.mvp b{font-size:17px;display:block}
+.mvp span{color:var(--muted);font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:calc(92px + var(--safe-b));transform:translate(-50%,10px);background:var(--line);color:var(--court);padding:11px 18px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;z-index:60;max-width:88vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (min-width:700px){.wrap{padding-left:24px;padding-right:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== 홈 ===== -->
+<section id="v-home" class="hidden">
+  <div class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#F47B20"/><path d="M2 16h28M16 2v28M6.5 6.5c4 3.5 4 15.5 0 19M25.5 6.5c-4 3.5-4 15.5 0 19" stroke="#13233A" stroke-width="1.8" fill="none"/></svg>
+      <b>스코어북</b>
+    </div>
+    <button class="chipbtn" id="adminBtn">관리자 로그인</button>
+  </div>
+  <div class="syncbar" id="syncBar"><i></i><span></span></div>
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="#코드, 경기명, 대회명, 팀명" autocomplete="off" enterkeyhint="search">
+  </div>
+  <div id="homeBody"></div>
+  <div class="dock adm"><div class="in"><button class="btn primary" id="newTourBtn">새 대회 만들기</button></div></div>
+</section>
+
+<!-- ===== 대회 ===== -->
+<section id="v-tour" class="hidden">
+  <div class="top">
+    <button class="iconbtn" data-back aria-label="뒤로">‹</button>
+    <div class="ttl"><b id="tourName"></b></div>
+    <button class="chipbtn adm" id="editTourBtn">대회 설정</button>
+  </div>
+  <div class="tags" id="tourTags"></div>
+  <div class="roster" id="tourRoster"></div>
+  <div class="recordline" id="tourRecord"></div>
+  <div class="list" id="tourGames"></div>
+  <div class="dock adm"><div class="in"><button class="btn primary" id="addGameBtn">경기 추가</button></div></div>
+</section>
+
+<!-- ===== 대회 만들기/설정 ===== -->
+<section id="v-tourform" class="hidden">
+  <div class="top">
+    <button class="iconbtn" data-back aria-label="뒤로">‹</button>
+    <div class="ttl"><b id="tfTitle">새 대회</b></div>
+  </div>
+  <div class="field"><label for="tfName">대회명</label><input id="tfName" placeholder="예: 양주시장배 농구대회" autocomplete="off"></div>
+  <div class="field">
+    <label>경기 방식</label>
+    <div class="seg" id="tfMode">
+      <button data-mode="5v5-4">5대5 4쿼터</button>
+      <button data-mode="5v5-2">5대5 전·후반</button>
+      <button data-mode="3x3">3x3</button>
+    </div>
+    <div class="hint hidden" id="tfModeHint">바꾼 방식은 앞으로 추가하는 경기부터 적용돼요.</div>
+  </div>
+  <div class="field"><label for="tfHome">우리팀</label><input id="tfHome" placeholder="우리팀 이름" autocomplete="off"></div>
+  <div class="field">
+    <label for="tfRoster">선수 명단 (한 줄에 한 명: 번호 이름)</label>
+    <textarea id="tfRoster" placeholder="7 김주원&#10;3 홍길동&#10;11 이몽룡"></textarea>
+    <div id="tfCopyWrap" class="hidden"><div class="hint">다른 대회 명단 가져오기</div><div class="chips" id="tfCopy"></div></div>
+  </div>
+  <button class="btn danger hidden" id="tfDelete" style="width:100%;margin-top:8px">대회 삭제</button>
+  <div class="dock"><div class="in"><button class="btn primary" id="tfSave">대회 만들기</button></div></div>
+</section>
+
+<!-- ===== 기록 ===== -->
+<section id="v-live" class="hidden">
+  <div class="top">
+    <button class="iconbtn" data-back aria-label="뒤로">‹</button>
+    <div class="ttl"><b id="liveTitle"></b><small><span class="code" id="liveCode"></span> <span id="liveTour"></span></small></div>
+    <button class="chipbtn adm" id="editGameBtn">경기 정보</button>
+  </div>
+  <div class="board" id="board"></div>
+
+  <!-- 관리자: 기록 -->
+  <div class="livegrid adm">
+    <div>
+      <div class="panel"><h4>선수 <em id="selHint"></em></h4><div class="jerseys" id="jerseys"></div></div>
+      <div class="panel pad" id="pad"><div class="shots" id="shots"></div><div class="stats" id="stats"></div></div>
+    </div>
+    <div>
+      <div class="panel"><h4 id="oppTitle">상대팀</h4><div class="opp" id="opp"></div></div>
+      <div style="display:flex;gap:10px;margin-bottom:14px"><button class="btn undo" id="undoBtn">↶ 되돌리기</button><button class="btn ghost" data-tout="H">우리 타임아웃</button></div>
+      <div class="panel"><h4>기록 로그</h4><div class="log" id="logA"></div></div>
+    </div>
+  </div>
+  <div class="panel adm"><details id="liveBoxD"><summary>박스스코어</summary><div class="tw" id="liveBoxA"></div></details></div>
+
+  <!-- 보기 전용 -->
+  <div class="view-only">
+    <div class="panel"><h4>기간별 점수</h4><div class="tw" id="liveQ"></div></div>
+    <div class="panel"><h4>박스스코어</h4><div class="tw" id="liveBoxV"></div></div>
+    <div class="panel"><h4>기록 로그</h4><div class="log" id="logV"></div></div>
+  </div>
+  <div class="dock adm"><div class="in"><button class="btn primary" id="finishBtn">경기 종료</button></div></div>
+</section>
+
+<!-- ===== 결과 ===== -->
+<section id="v-result" class="hidden">
+  <div class="top">
+    <button class="iconbtn" data-back aria-label="뒤로">‹</button>
+    <div class="ttl"><b id="resTitle"></b><small><span class="code" id="resCode"></span> <span id="resTour"></span></small></div>
+    <button class="chipbtn adm" id="editGameBtn2">경기 정보</button>
+  </div>
+  <div class="panel final" id="final"></div>
+  <div class="panel"><h4>기간별 점수</h4><div class="tw" id="resQ"></div></div>
+  <div class="panel"><h4>MVP</h4><div id="resMvp"></div></div>
+  <div class="panel"><h4>박스스코어</h4><div class="tw" id="resBox"></div></div>
+  <div style="display:flex;gap:10px;margin-bottom:10px"><button class="btn ghost" id="copySum">결과 복사</button><button class="btn ghost" id="copyTsv">박스스코어 복사</button></div>
+  <div class="dock adm"><div class="in"><button class="btn ghost" id="reopenBtn">기록 수정</button><button class="btn primary" id="nextGameBtn">다음 경기 추가</button></div></div>
+</section>
+
+</div>
+
+<!-- ===== 시트들 ===== -->
+<div class="scrim" id="scrim"></div>
+
+<div class="sheet" id="sh-add" role="dialog" aria-label="경기 추가">
+  <h3>경기 추가</h3><div class="sub" id="addSub"></div>
+  <div class="field"><label for="addAway">상대팀</label><input id="addAway" placeholder="상대팀 이름" autocomplete="off" enterkeyhint="done"></div>
+  <div class="field">
+    <label for="addName">경기명</label><input id="addName" autocomplete="off">
+    <div class="chips" id="addChips"><button data-nm="예선">예선</button><button data-nm="8강">8강</button><button data-nm="4강">4강</button><button data-nm="결승">결승</button><button data-nm="연습경기">연습경기</button></div>
+  </div>
+  <div class="field"><label for="addDate">날짜</label><input id="addDate" type="date"></div>
+  <div class="acts"><button class="btn primary" id="addGo">기록 시작</button></div>
+</div>
+
+<div class="sheet" id="sh-game" role="dialog" aria-label="경기 정보">
+  <h3>경기 정보</h3><div class="sub" id="egSub"></div>
+  <div class="field"><label for="egAway">상대팀</label><input id="egAway" autocomplete="off"></div>
+  <div class="field"><label for="egName">경기명</label><input id="egName" autocomplete="off"></div>
+  <div class="field"><label for="egDate">날짜</label><input id="egDate" type="date"></div>
+  <div class="field"><label for="egRoster">이 경기 선수 명단</label><textarea id="egRoster" style="min-height:140px"></textarea><div class="hint">선수를 추가하면 대회 명단에도 같이 추가돼요.</div></div>
+  <div class="acts"><button class="btn danger" id="egDelete">경기 삭제</button><button class="btn primary" id="egSave">저장</button></div>
+</div>
+
+<div class="sheet" id="sh-pin" role="dialog" aria-label="관리자 로그인">
+  <h3>관리자 로그인</h3><div class="sub">로그인하면 이 기기에서 경기를 추가하고 기록할 수 있어요.</div>
+  <div class="field"><label for="pinIn">관리자 비밀번호</label><input id="pinIn" type="password" inputmode="numeric" autocomplete="off" enterkeyhint="go"></div>
+  <div class="acts"><button class="btn primary" id="pinGo">로그인</button></div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* =========================================================
+   Firebase 설정 — 콘솔 > 프로젝트 설정 > 내 앱 의 firebaseConfig 를 그대로 붙여넣기
+   비워두면 이 기기에만 저장되는 "로컬 모드"로 동작해요.
+   ========================================================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCkYQW2sovvK6oho3MO60yHuK0mTqbIB4U",
+  authDomain: "basketball-scorebook-c9a68.firebaseapp.com",
+  projectId: "basketball-scorebook-c9a68",
+  storageBucket: "basketball-scorebook-c9a68.firebasestorage.app",
+  messagingSenderId: "1061730170330",
+  appId: "1:1061730170330:web:eee31deb72587a41f3bce3"
+};
+const FB_ON = !!FIREBASE_CONFIG.apiKey;
+const FB_VER = '10.12.2';
+
+/* ---------- 기본 ---------- */
+const $ = id => document.getElementById(id);
+const LOCAL_KEY = 'bbRec_v3', MIGRATED_KEY = 'bbMigrated_v3', ADMIN_KEY = 'bbAdmin_v3';
+const STAT = [['OREB','공격리바'],['DREB','수비리바'],['AST','어시스트'],['STL','스틸'],['BLK','블록'],['TO','턴오버'],['PF','파울']];
+const SL = Object.fromEntries(STAT);
+const MODES = { '5v5-4':{mode:'5v5',periods:4,label:'5대5 4쿼터'}, '5v5-2':{mode:'5v5',periods:2,label:'5대5 전·후반'}, '3x3':{mode:'3x3',periods:1,label:'3x3'} };
+
+let S = { tours: [], games: [] };
+let view = 'home', curTour = null, G = null, sel = null;
+let admin = false, cloud = null, tfEditing = null, tfMode = '5v5-4';
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const newId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const clean = o => JSON.parse(JSON.stringify(o));
+function vib(){ try{ navigator.vibrate && navigator.vibrate(12); }catch(e){} }
+let tt;
+function toast(m){ const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2000); }
+const modeKey = s => s.mode === '3x3' ? '3x3' : (s.periods === 2 ? '5v5-2' : '5v5-4');
+
+function genCode(){
+  const used = new Set(S.games.map(g => g.code));
+  let c;
+  do {
+    let n;
+    try{ n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000; }catch(e){ n = Math.floor(Math.random() * 1000000); }
+    c = String(n).padStart(6, '0');
+  } while (used.has(c));
+  return c;
+}
+
+/* ---------- 로컬 저장 (Firebase 없을 때) + 예전 버전 옮기기 ---------- */
+function readJSON(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function loadLocal(){
+  const v3 = readJSON(LOCAL_KEY);
+  if (v3 && Array.isArray(v3.tours)) return v3;
+  // v2(여러 경기) / v1(한 경기) → 대회로 묶기
+  let games = [];
+  const v2 = readJSON('bbRec_v2'); if (v2 && Array.isArray(v2.games)) games = v2.games;
+  const v1 = readJSON('bbRec_v1'); if (v1 && v1.setup && (v1.events || []).length && !games.length) games = [{ ...v1, code: String(Math.floor(Math.random()*1e6)).padStart(6,'0'), created: Date.now() }];
+  const tours = [], byName = {};
+  games.sort((a,b) => (a.created||0) - (b.created||0)).forEach(g => {
+    const name = (g.setup.tour || '').trim() || '대회명 없음';
+    let t = byName[name];
+    if (!t){ t = byName[name] = { id:newId(), name, created:g.created||Date.now() }; tours.push(t); }
+    Object.assign(t, { mode:g.setup.mode, periods:g.setup.periods, home:g.setup.home, players:g.setup.players.map(p => ({ no:p.no, name:p.name })) });
+    g.tourId = t.id; g.setup.tour = name;
+    if (g.status === 'setup') g.status = 'live';
+  });
+  return { tours, games };
+}
+function saveLocal(){ if (FB_ON) return; try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(S)); }catch(e){ toast('저장 공간이 부족해요'); } }
+
+/* ---------- Firebase ---------- */
+async function createCloud(cfg){
+  const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+  const [A, AU, F] = await Promise.all([import(base+'firebase-app.js'), import(base+'firebase-auth.js'), import(base+'firebase-firestore.js')]);
+  const app = A.initializeApp(cfg);
+  const auth = AU.getAuth(app);
+  let db;
+  try{ db = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) }); }
+  catch(e){ db = F.getFirestore(app); }
+  const user = await new Promise(res => { const un = AU.onAuthStateChanged(auth, u => { un(); res(u); }); });
+  const uid = user ? user.uid : (await AU.signInAnonymously(auth)).user.uid;
+  const adminRef = F.doc(db, 'admins', uid);
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+  return {
+    async isAdmin(){
+      try{ const ok = (await F.getDoc(adminRef)).exists(); localStorage.setItem(ADMIN_KEY, ok ? '1' : ''); return ok; }
+      catch(e){ return localStorage.getItem(ADMIN_KEY) === '1'; }
+    },
+    async login(pin){
+      try{ await withTimeout(F.setDoc(adminRef, { pin:String(pin), at:Date.now() }), 10000); localStorage.setItem(ADMIN_KEY, '1'); return 'ok'; }
+      catch(e){ return e.message === 'timeout' ? 'offline' : 'denied'; }
+    },
+    async logout(){ localStorage.setItem(ADMIN_KEY, ''); try{ await withTimeout(F.deleteDoc(adminRef), 8000); }catch(e){} },
+    save(col, id, data){ return F.setDoc(F.doc(db, col, id), clean(data)); },
+    remove(col, id){ return F.deleteDoc(F.doc(db, col, id)); },
+    subscribe(onData, onStatus){
+      const got = { tournaments:null, games:null };
+      const listen = col => F.onSnapshot(F.collection(db, col), { includeMetadataChanges:true }, snap => {
+        got[col] = snap.docs.map(d => d.data());
+        if (got.tournaments && got.games) onData(got.tournaments, got.games);
+        onStatus(snap.metadata.fromCache ? 'offline' : 'online');
+      }, () => onStatus('error'));
+      listen('tournaments'); listen('games');
+    }
+  };
+}
+
+/* ---------- 저장 공통 ---------- */
+function upsert(arr, obj, key){ const i = arr.findIndex(x => x[key] === obj[key]); if (i >= 0) arr[i] = obj; else arr.push(obj); }
+function onSaveErr(e){
+  if (e && /permission/i.test(e.code || e.message || '')){ admin = false; localStorage.setItem(ADMIN_KEY, ''); applyAdmin(); toast('관리자 권한이 없어요. 다시 로그인해 주세요'); }
+  else toast('저장하지 못했어요. 연결을 확인해 주세요');
+}
+function putTour(t){ upsert(S.tours, t, 'id'); if (cloud) cloud.save('tournaments', t.id, t).catch(onSaveErr); else saveLocal(); }
+function putGame(g){ upsert(S.games, g, 'code'); if (cloud) cloud.save('games', g.code, g).catch(onSaveErr); else saveLocal(); }
+function dropGame(code){ S.games = S.games.filter(g => g.code !== code); if (cloud) cloud.remove('games', code).catch(onSaveErr); else saveLocal(); }
+function dropTour(id){
+  S.games.filter(g => g.tourId === id).forEach(g => dropGame(g.code));
+  S.tours = S.tours.filter(t => t.id !== id); if (cloud) cloud.remove('tournaments', id).catch(onSaveErr); else saveLocal();
+}
+
+/* ---------- 조회 ---------- */
+const tourOf = id => S.tours.find(t => t.id === id);
+const byRecent = (a,b) => (b.setup.date || '').localeCompare(a.setup.date || '') || (b.created||0) - (a.created||0);
+const gamesOf = id => S.games.filter(g => g.tourId === id).sort(byRecent);
+function gScore(g, team, p){ return g.events.filter(e => e.team === team && e.k === 'shot' && e.made && (p == null || e.p === p)).reduce((a,e) => a + e.v, 0); }
+function gResult(g){ const h = gScore(g,'H'), a = gScore(g,'A'); return h > a ? 'w' : h < a ? 'l' : 'd'; }
+function recordOf(id){
+  const r = { w:0, l:0, d:0 };
+  gamesOf(id).filter(g => g.status === 'done').forEach(g => r[gResult(g)]++);
+  return r;
+}
+const recText = r => [r.w && `${r.w}승`, r.l && `${r.l}패`, r.d && `${r.d}무`].filter(Boolean).join(' ') || '';
+
+/* ---------- 경기 계산 (G 기준) ---------- */
+const is3 = () => G.setup.mode === '3x3';
+const shotVals = () => is3() ? [1,2] : [2,3];
+const N = () => G.setup.periods;
+function plabel(p){
+  const n = N();
+  if (p > n) return n === 1 ? '연장' + (p - n > 1 ? p - n : '') : 'OT' + (p - n);
+  if (n === 4) return 'Q' + p;
+  if (n === 2) return p === 1 ? '전반' : '후반';
+  return '본경기';
+}
+const score = (team, p) => gScore(G, team, p);
+const playerOf = id => G.setup.players.find(p => p.id === id);
+const isFoul = e => (e.k === 'stat' && e.s === 'PF') || e.k === 'foul';
+const foulGroup = p => is3() ? 0 : Math.min(p, N());
+function teamFouls(team){ const g = foulGroup(G.period); return G.events.filter(e => e.team === team && isFoul(e) && foulGroup(e.p) === g).length; }
+const touts = team => G.events.filter(e => e.team === team && e.k === 'tout').length;
+function emptyStats(){ const s = { pts:0, ftm:0, fta:0, reb:0 }; [1,2,3].forEach(v => { s['m'+v] = 0; s['a'+v] = 0; }); STAT.forEach(([k]) => s[k] = 0); return s; }
+function pstats(id){
+  const s = emptyStats();
+  for (const e of G.events){
+    if (e.team !== 'H' || e.pl !== id) continue;
+    if (e.k === 'shot'){
+      if (e.ft){ s.fta++; if (e.made){ s.ftm++; s.pts += 1; } }
+      else { s['a'+e.v]++; if (e.made){ s['m'+e.v]++; s.pts += e.v; } }
+    } else if (e.k === 'stat') s[e.s]++;
+  }
+  s.reb = s.OREB + s.DREB;
+  return s;
+}
+const fgm = s => shotVals().reduce((a,v) => a + s['m'+v], 0);
+const fga = s => shotVals().reduce((a,v) => a + s['a'+v], 0);
+const pct = (m,a) => a ? Math.round(m / a * 100) + '%' : '-';
+const eff = s => s.pts + s.reb + s.AST + s.STL + s.BLK - (fga(s) - fgm(s)) - (s.fta - s.ftm) - s.TO;
+function sumStats(list){ const t = emptyStats(); list.forEach(s => Object.keys(t).forEach(k => t[k] += s[k])); return t; }
+function statLine(s){ let t = `${s.pts}점 ${s.reb}리바 ${s.AST}어시`; if (s.STL) t += ` ${s.STL}스틸`; if (s.BLK) t += ` ${s.BLK}블록`; return t; }
+function mvp(){
+  let best = null;
+  G.setup.players.forEach(p => {
+    if (!G.events.some(e => e.pl === p.id)) return;
+    const s = pstats(p.id), v = eff(s);
+    if (!best || v > best.v || (v === best.v && s.pts > best.s.pts)) best = { p, s, v };
+  });
+  return best;
+}
+function periodsPlayed(){ const m = Math.max(N(), G.period, ...G.events.map(e => e.p)); return Array.from({length:m}, (_,i) => i + 1); }
+function desc(e){
+  const p = e.pl != null ? playerOf(e.pl) : null;
+  const team = e.team === 'H' ? (G.setup.home || '우리팀') : (G.setup.away || '상대팀');
+  const who = e.team === 'H' && e.pl != null ? (p ? `#${p.no} ${p.name}`.trim() : '명단에서 빠진 선수') : team;
+  if (e.k === 'shot') return `${who} ${e.ft ? '자유투' : e.v + '점'} ${e.made ? '성공' : '실패'}`;
+  if (e.k === 'stat') return `${who} ${SL[e.s]}`;
+  if (e.k === 'foul') return `${who} 파울`;
+  if (e.k === 'tout') return `${team} 타임아웃`;
+  return '';
+}
+
+/* ---------- 표 ---------- */
+function boxCols(){
+  return [
+    ['#', p => p ? p.no : ''],
+    ['이름', p => p ? p.name : '합계'],
+    ['득점', (p,s) => s.pts],
+    ...shotVals().map(v => [v + '점', (p,s) => `${s['m'+v]}/${s['a'+v]}`]),
+    ['야투%', (p,s) => pct(fgm(s), fga(s))],
+    ['자유투', (p,s) => `${s.ftm}/${s.fta}`],
+    ['리바', (p,s) => s.reb],
+    ['공/수', (p,s) => `${s.OREB}/${s.DREB}`],
+    ['어시', (p,s) => s.AST], ['스틸', (p,s) => s.STL], ['블록', (p,s) => s.BLK],
+    ['턴오버', (p,s) => s.TO], ['파울', (p,s) => s.PF],
+  ];
+}
+function boxData(){ const rows = G.setup.players.map(p => ({ p, s: pstats(p.id) })); return { rows, tot: sumStats(rows.map(r => r.s)) }; }
+function boxHTML(){
+  const cols = boxCols(), { rows, tot } = boxData();
+  const head = '<tr>' + cols.map(([h],i) => `<th class="${i===1?'l':''}">${h}</th>`).join('') + '</tr>';
+  const line = (p,s,cls='') => `<tr class="${cls}">` + cols.map(([h,f],i) => `<td class="${i===1?'l':''}">${i===2?'<b>':''}${esc(f(p,s))}${i===2?'</b>':''}</td>`).join('') + '</tr>';
+  return `<table>${head}${rows.map(r => line(r.p, r.s)).join('')}${line(null, tot, 'tot')}</table>`;
+}
+function boxTSV(){
+  const cols = boxCols(), { rows, tot } = boxData();
+  return [cols.map(c => c[0]).join('\t'), ...rows.map(r => cols.map(([h,f]) => f(r.p, r.s)).join('\t')), cols.map(([h,f]) => f(null, tot)).join('\t')].join('\n');
+}
+function qHTML(){
+  const ps = periodsPlayed(), s = G.setup;
+  const head = `<tr><th class="l">팀</th>${ps.map(p => `<th>${plabel(p)}</th>`).join('')}<th>합계</th></tr>`;
+  const row = (t,name) => `<tr><td class="l">${esc(name)}</td>${ps.map(p => `<td>${score(t,p)}</td>`).join('')}<td><b>${score(t)}</b></td></tr>`;
+  return `<table>${head}${row('H', s.home || '우리팀')}${row('A', s.away || '상대팀')}</table>`;
+}
+function logHTML(withDelete){
+  let h = 0, a = 0;
+  const rows = G.events.map(e => { if (e.k === 'shot' && e.made){ if (e.team === 'H') h += e.v; else a += e.v; } return { e, sc: `${h}:${a}` }; });
+  return rows.reverse().map(({e,sc}) =>
+    `<div class="li ${e.team}"><span class="q">${plabel(e.p)}</span><span class="d">${esc(desc(e))}</span><span class="s">${sc}</span>${withDelete ? `<button class="x" data-del="${e.id}" aria-label="기록 삭제">✕</button>` : ''}</div>`
+  ).join('') || '<div class="empty" style="padding:16px">아직 기록이 없어요</div>';
+}
+
+/* ---------- 화면 이동 (뒤로가기 지원) ---------- */
+let sheetOpen = null, afterPop = null;
+const stack = [{ v:'home' }];   // 브라우저 기록과 같은 순서로 화면 기록
+function stateNow(){ return { v:view, tour:curTour, code:G ? G.code : null }; }
+function replaceTop(){ const s = stateNow(); history.replaceState(s, ''); stack[stack.length - 1] = s; }
+function nav(v, opts = {}){
+  view = v;
+  if ('tour' in opts) curTour = opts.tour;
+  if ('game' in opts){ G = opts.game; sel = null; }
+  const s = stateNow();
+  if (opts.replace){ history.replaceState(s, ''); stack[stack.length - 1] = s; }
+  else { history.pushState(s, ''); stack.push(s); }
+  render(); window.scrollTo(0, 0);
+}
+function parentOf(){
+  if (view === 'tour') return { v:'home', tour:null };
+  if (view === 'tourform') return tfEditing ? { v:'tour', tour:curTour } : { v:'home', tour:null };
+  if (view === 'live' || view === 'result') return { v:'tour', tour:G ? G.tourId : curTour };
+  return null;
+}
+// ‹ 버튼: 기록 순서와 상관없이 항상 위 단계(경기 → 대회 → 홈)로
+function goBack(after){
+  const p = parentOf(); if (!p) return;
+  const prev = stack[stack.length - 2];
+  if (prev && !prev.sheet && prev.v === p.v && (p.v !== 'tour' || prev.tour === p.tour)){ afterPop = after || null; history.back(); }
+  else { nav(p.v, { tour:p.tour, game:null, replace:true }); if (after) after(); }
+}
+function restore(s){
+  s = s || { v:'home' };
+  view = s.v; curTour = s.tour || null; G = s.code ? S.games.find(g => g.code === s.code) || null : null; sel = null;
+  if ((view === 'live' || view === 'result') && !G) view = curTour ? 'tour' : 'home';
+  if (view === 'tour' && !tourOf(curTour)) view = 'home';
+  if (view === 'tourform') view = curTour ? 'tour' : 'home';
+  render(); window.scrollTo(0, 0);
+}
+window.addEventListener('popstate', e => {
+  if (stack.length > 1) stack.pop();
+  if (sheetOpen){ hideSheet(); return; }
+  restore(e.state);
+  if (afterPop){ const f = afterPop; afterPop = null; f(); }
+});
+function openGame(g){ nav(g.status === 'done' ? 'result' : 'live', { tour:g.tourId, game:g }); }
+
+function openSheet(id){
+  if (sheetOpen) hideSheet();
+  sheetOpen = id; $(id).classList.add('on'); $('scrim').classList.add('on');
+  const s = { ...stateNow(), sheet:id }; history.pushState(s, ''); stack.push(s);
+}
+function hideSheet(){ if (!sheetOpen) return; $(sheetOpen).classList.remove('on'); $('scrim').classList.remove('on'); sheetOpen = null; document.activeElement && document.activeElement.blur(); }
+function closeSheet(){ if (sheetOpen) history.back(); }
+$('scrim').onclick = closeSheet;
+
+/* ---------- 렌더 ---------- */
+function render(){
+  ['home','tour','tourform','live','result'].forEach(v => $('v-' + v).classList.toggle('hidden', v !== view));
+  ({ home:renderHome, tour:renderTour, tourform:renderTourForm, live:renderLive, result:renderResult })[view]();
+}
+function applyAdmin(){
+  document.body.classList.toggle('is-admin', admin);
+  $('adminBtn').textContent = admin ? '관리자 ✓' : '관리자 로그인';
+  $('adminBtn').classList.toggle('on', admin);
+  if (!admin && view === 'tourform') restore({ v: curTour ? 'tour' : 'home', tour: curTour });
+  else render();
+}
+function setSync(st){
+  const m = { local:'이 기기에만 저장 중 (서버 미연결)', connecting:'서버 연결 중…', online:'실시간 연결됨', offline:'오프라인 — 연결되면 자동으로 올라가요', error:'서버 연결 실패 — 새로고침해 주세요' };
+  $('syncBar').className = 'syncbar ' + st; $('syncBar').querySelector('span').textContent = m[st];
+}
+
+function gameRow(g, showTour){
+  const s = g.setup, h = gScore(g,'H'), a = gScore(g,'A'), r = gResult(g);
+  const badge = g.status === 'done' ? `<span class="badge ${r}">${{w:'승',l:'패',d:'무'}[r]}</span>` : '<span class="badge live">LIVE</span>';
+  return `<button class="row" data-game="${g.code}">
+    <div class="main">
+      <div class="t">${esc(s.name || '경기')}<span class="vs">vs</span>${esc(s.away || '상대팀')}</div>
+      <div class="s"><span class="code">#${g.code}</span><span>${esc(s.date)}</span>${showTour ? `<span>${esc(s.tour)}</span>` : ''}</div>
+    </div>
+    <div class="sc"><span class="h">${h}</span><i>:</i><span class="a">${a}</span></div>
+    ${badge}
+  </button>`;
+}
+function tourRow(t){
+  const n = gamesOf(t.id).length, r = recText(recordOf(t.id));
+  return `<button class="row" data-tour="${t.id}">
+    <div class="main">
+      <div class="t">${esc(t.name)}</div>
+      <div class="s"><span>${MODES[modeKey(t)].label}</span><span>${esc(t.home || '우리팀')}</span></div>
+    </div>
+    <div class="side"><div class="rec">${r || '&nbsp;'}</div><div class="cnt">${n}경기</div></div>
+  </button>`;
+}
+function renderHome(){
+  const q = $('q').value.trim().toLowerCase().replace(/^#/, '');
+  const has = x => (x || '').toLowerCase().includes(q);
+  let html = '';
+  if (q){
+    const ts = S.tours.filter(t => has(t.name) || has(t.home));
+    const gs = S.games.filter(g => [g.code, g.setup.tour, g.setup.name, g.setup.home, g.setup.away].some(has)).sort(byRecent);
+    if (ts.length) html += `<div class="sec"><h2>대회</h2><div class="list">${ts.map(tourRow).join('')}</div></div>`;
+    if (gs.length) html += `<div class="sec"><h2>경기</h2><div class="list">${gs.map(g => gameRow(g, true)).join('')}</div></div>`;
+    if (!html) html = `<div class="empty"><b>검색 결과가 없어요</b>코드 6자리나 팀 이름으로 다시 찾아보세요.</div>`;
+  } else {
+    const live = S.games.filter(g => g.status !== 'done').sort(byRecent);
+    if (live.length) html += `<div class="sec"><h2>지금 진행 중</h2><div class="list">${live.map(g => gameRow(g, true)).join('')}</div></div>`;
+    const tours = [...S.tours].sort((a,b) => {
+      const la = gamesOf(a.id)[0], lb = gamesOf(b.id)[0];
+      return ((lb && lb.setup.date) || '').localeCompare((la && la.setup.date) || '') || (b.created||0) - (a.created||0);
+    });
+    if (tours.length) html += `<div class="sec"><h2>대회</h2><div class="list">${tours.map(tourRow).join('')}</div></div>`;
+    if (!html) html = admin
+      ? `<div class="empty"><b>아직 대회가 없어요</b>아래 '새 대회 만들기'로 시작하세요.</div>`
+      : `<div class="empty"><b>아직 기록된 경기가 없어요</b>기록 담당은 오른쪽 위 관리자 로그인을 눌러 주세요.</div>`;
+  }
+  $('homeBody').innerHTML = html;
+}
+
+function renderTour(){
+  const t = tourOf(curTour); if (!t){ restore({ v:'home' }); return; }
+  $('tourName').textContent = t.name;
+  $('tourTags').innerHTML = `<span class="tag o">${esc(t.home || '우리팀')}</span><span class="tag">${MODES[modeKey(t)].label}</span><span class="tag">명단 ${t.players.length}명</span>`;
+  $('tourRoster').innerHTML = t.players.map(p => `<span><b>${esc(p.no || '-')}</b>${esc(p.name)}</span>`).join('');
+  const r = recordOf(t.id), gs = gamesOf(t.id);
+  $('tourRecord').innerHTML = recText(r) ? `전적 <b>${recText(r)}</b>` : '';
+  $('tourGames').innerHTML = gs.map(g => gameRow(g, false)).join('') ||
+    `<div class="empty"><b>아직 경기가 없어요</b>${admin ? "아래 '경기 추가'를 눌러 첫 경기를 기록하세요." : ''}</div>`;
+}
+
+/* 대회 만들기 / 설정 */
+function setTfMode(k){ tfMode = k; document.querySelectorAll('#tfMode button').forEach(b => b.classList.toggle('on', b.dataset.mode === k)); }
+function renderTourForm(){
+  const t = tfEditing ? tourOf(tfEditing) : null;
+  $('tfTitle').textContent = t ? '대회 설정' : '새 대회';
+  $('tfSave').textContent = t ? '저장' : '대회 만들기';
+  $('tfName').value = t ? t.name : '';
+  $('tfHome').value = t ? t.home : '';
+  $('tfRoster').value = t ? t.players.map(p => `${p.no} ${p.name}`.trim()).join('\n') : '';
+  setTfMode(t ? modeKey(t) : '5v5-4');
+  $('tfModeHint').classList.toggle('hidden', !t);
+  $('tfDelete').classList.toggle('hidden', !t);
+  const others = S.tours.filter(x => x.id !== tfEditing && x.players.length);
+  $('tfCopyWrap').classList.toggle('hidden', !others.length);
+  $('tfCopy').innerHTML = others.map(x => `<button data-copy="${x.id}">${esc(x.name)} (${x.players.length}명)</button>`).join('');
+}
+function parseLines(txt){
+  return txt.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+    const m = line.match(/^#?(\d{1,3})\s*[.\-)]?\s*(.*)$/);
+    return m ? { no:m[1], name:m[2].trim() } : { no:'', name:line };
+  });
+}
+
+/* 기록 화면 */
+function renderBoard(){
+  const s = G.setup;
+  const side = t => {
+    const n = teamFouls(t), name = t === 'H' ? (s.home || '우리팀') : (s.away || '상대팀');
+    const fouls = is3()
+      ? `<span>팀파울 <b class="num" style="font-size:15px;color:${n >= 7 ? 'var(--foul)' : 'var(--line)'}">${n}</b></span>`
+      : `<span class="pips ${n >= 5 ? 'full' : ''}" title="팀파울 ${n}">${[0,1,2,3,4].map(i => `<i class="${i < n ? 'f' : ''}"></i>`).join('')}</span>`;
+    return `<div class="bside ${t}"><div class="bname">${esc(name)}</div><div class="bscore">${score(t)}</div>
+      <div class="bmeta">${fouls}<span class="to">TO <b>${touts(t)}</b></span></div></div>`;
+  };
+  $('board').innerHTML = side('H') +
+    `<div class="bmid">${G.status !== 'done' ? '<span class="livetag">LIVE</span>' : ''}<div class="per">${plabel(G.period)}</div>
+      <div class="arrows adm"><button data-per="-1" aria-label="이전 쿼터">‹</button><button data-per="1" aria-label="다음 쿼터">›</button></div></div>` +
+    side('A');
+}
+function renderLive(){
+  if (!G){ restore({ v:'home' }); return; }
+  const s = G.setup;
+  $('liveTitle').textContent = `${s.name || '경기'} vs ${s.away || '상대팀'}`;
+  $('liveCode').textContent = '#' + G.code; $('liveTour').textContent = s.tour;
+  renderBoard();
+  if (admin){
+    $('jerseys').innerHTML = s.players.map(p => {
+      const st = pstats(p.id), out = !is3() && st.PF >= 5;
+      return `<button class="jersey ${sel === p.id ? 'on' : ''} ${out ? 'out' : ''}" data-pl="${p.id}">
+        <span class="fp">${'<i></i>'.repeat(Math.min(st.PF, 5))}</span>
+        <div class="n">${esc(p.no || '-')}</div><div class="nm">${esc(p.name)}</div>
+        <div class="st">${st.pts}점 ${st.reb}리 ${st.AST}어</div></button>`;
+    }).join('');
+    const sp = sel != null ? playerOf(sel) : null;
+    $('selHint').textContent = sp ? `#${sp.no} ${sp.name} 기록 중` : '먼저 선수를 누르세요';
+    $('pad').classList.toggle('off', sel == null);
+    const types = [...shotVals().map(v => ({ v, ft:0, l:v + '점' })), { v:1, ft:1, l:'자유투' }];
+    $('shots').innerHTML =
+      types.map(t => `<button class="k make" data-shot="${t.v}" data-ft="${t.ft}" data-made="1">${t.l} 성공</button>`).join('') +
+      types.map(t => `<button class="k miss" data-shot="${t.v}" data-ft="${t.ft}" data-made="0">${t.l} 실패</button>`).join('');
+    $('stats').innerHTML = STAT.map(([k,l]) => `<button class="k stat ${k === 'PF' ? 'pf' : ''}" data-stat="${k}">${l}</button>`).join('');
+    $('oppTitle').textContent = (s.away || '상대팀') + ' — 점수만 기록';
+    $('opp').innerHTML = (is3() ? [1,2] : [1,2,3]).map(v => `<button class="k o" data-opp="${v}">+${v}</button>`).join('') +
+      `<button class="k osm" data-afoul="1">파울</button><button class="k osm" data-tout="A">타임아웃</button>`;
+    $('logA').innerHTML = logHTML(true);
+    if ($('liveBoxD').open) $('liveBoxA').innerHTML = boxHTML();
+  } else {
+    $('liveQ').innerHTML = qHTML();
+    $('liveBoxV').innerHTML = boxHTML();
+    $('logV').innerHTML = logHTML(false);
+  }
+}
+function renderResult(){
+  if (!G){ restore({ v:'home' }); return; }
+  const s = G.setup, h = score('H'), a = score('A'), r = gResult(G);
+  $('resTitle').textContent = `${s.name || '경기'} vs ${s.away || '상대팀'}`;
+  $('resCode').textContent = '#' + G.code; $('resTour').textContent = s.tour;
+  $('final').innerHTML = `<div class="meta">${esc(s.date)} · ${MODES[modeKey(s)].label}</div>
+    <div class="fs">
+      <div class="bside H"><div class="bname">${esc(s.home || '우리팀')}</div><div class="bscore">${h}</div></div>
+      <div class="res ${r}">${{w:'승',l:'패',d:'무'}[r]}</div>
+      <div class="bside A"><div class="bname">${esc(s.away || '상대팀')}</div><div class="bscore">${a}</div></div>
+    </div>`;
+  $('resQ').innerHTML = qHTML();
+  const m = mvp();
+  $('resMvp').innerHTML = m ? `<div class="mvp"><div class="n">${esc(m.p.no)}</div><div><b>${esc(m.p.name)}</b><span>${statLine(m.s)}</span></div></div>` : '<span style="color:var(--muted)">기록이 없어요</span>';
+  $('resBox').innerHTML = boxHTML();
+}
+
+/* ---------- 기록 추가 ---------- */
+function add(e){
+  if (!admin) return;
+  const bH = score('H'), bA = score('A');
+  e.id = ++G.seq; e.p = G.period;
+  G.events.push(e);
+  putGame(G); vib();
+  if (e.k === 'shot' && e.made && is3()){ const h = score('H'), a = score('A'); if ((bH < 21 && h >= 21) || (bA < 21 && a >= 21)) toast('21점 도달 — 경기 종료!'); }
+  if (isFoul(e)){
+    const tf = teamFouls(e.team), who = e.team === 'H' ? '우리팀' : '상대팀';
+    if (!is3() && tf === 5) toast(`${who} 팀파울 5개 — 이제부터 자유투`);
+    if (is3() && (tf === 7 || tf === 10)) toast(`${who} 팀파울 ${tf}개`);
+    if (!is3() && e.pl != null && pstats(e.pl).PF === 5){ const p = playerOf(e.pl); toast(`#${p.no} ${p.name} 5반칙 퇴장`); }
+  }
+  sel = null; renderLive();
+}
+
+/* ---------- 결과 텍스트 ---------- */
+function summaryText(){
+  const s = G.setup, h = score('H'), a = score('A'), r = {w:'승',l:'패',d:'무'}[gResult(G)];
+  const L = [`#${G.code} [${s.tour}] ${s.name}`.trim(), `${s.date} · ${MODES[modeKey(s)].label}`, `${s.home || '우리팀'} ${h} : ${a} ${s.away || '상대팀'} (${r})`];
+  const ps = periodsPlayed();
+  if (ps.length > 1) L.push(ps.map(p => `${plabel(p)} ${score('H',p)}-${score('A',p)}`).join(' / '));
+  const m = mvp(); if (m) L.push(`MVP: #${m.p.no} ${m.p.name} (${statLine(m.s)})`);
+  const sc = s.players.map(p => ({ p, pts: pstats(p.id).pts })).filter(x => x.pts > 0).sort((x,y) => y.pts - x.pts);
+  if (sc.length) L.push('득점: ' + sc.map(x => `#${x.p.no} ${x.p.name} ${x.pts}`).join(', '));
+  return L.join('\n');
+}
+function copy(text, what){
+  const done = () => toast(`${what} 복사했어요`);
+  const fb = () => { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try{ document.execCommand('copy'); done(); }catch(e){ toast('복사하지 못했어요'); } t.remove(); };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done).catch(fb); else fb();
+}
+
+/* ---------- 클릭 처리 ---------- */
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  const d = b.dataset;
+  if ('back' in d){ goBack(); return; }
+  if (d.tour){ nav('tour', { tour:d.tour }); return; }
+  if (d.game){ const g = S.games.find(x => x.code === d.game); if (g) openGame(g); return; }
+  if (d.copy){ const t = tourOf(d.copy); if (t){ $('tfRoster').value = t.players.map(p => `${p.no} ${p.name}`.trim()).join('\n'); if (!$('tfHome').value) $('tfHome').value = t.home; toast(`${t.name} 명단을 가져왔어요`); } return; }
+  if (d.mode && b.closest('#tfMode')){ setTfMode(d.mode); return; }
+  if (d.nm){ const base = d.nm; let v = base; if (base === '예선'){ const k = gamesOf(curTour).filter(g => (g.setup.name || '').startsWith('예선')).length + 1; v = `예선 ${k}경기`; } $('addName').value = v; return; }
+  if (!admin || !G) return;
+  if (d.per){
+    const dir = +d.per;
+    if (dir < 0 && G.period > 1){ G.period--; }
+    else if (dir > 0){ if (G.period >= N() && !confirm(`${plabel(G.period + 1)}을(를) 시작할까요?`)) return; G.period++; }
+    else return;
+    sel = null; putGame(G); renderLive(); toast(plabel(G.period)); return;
+  }
+  if (d.pl){ const id = +d.pl; sel = sel === id ? null : id; vib(); renderLive(); return; }
+  if (d.shot && sel != null){ add({ team:'H', pl:sel, k:'shot', v:+d.shot, ft:d.ft === '1', made:d.made === '1' }); return; }
+  if (d.stat && sel != null){ add({ team:'H', pl:sel, k:'stat', s:d.stat }); return; }
+  if (d.opp){ add({ team:'A', k:'shot', v:+d.opp, ft:false, made:true }); return; }
+  if (d.afoul){ add({ team:'A', k:'foul' }); return; }
+  if (d.tout){ add({ team:d.tout, k:'tout' }); return; }
+  if (d.del){
+    const e = G.events.find(x => x.id === +d.del);
+    if (e && confirm(`이 기록을 삭제할까요?\n${plabel(e.p)} ${desc(e)}`)){ G.events = G.events.filter(x => x !== e); putGame(G); renderLive(); toast('기록을 삭제했어요'); }
+  }
+});
+
+$('q').addEventListener('input', renderHome);
+
+/* 관리자 */
+$('adminBtn').onclick = async () => {
+  if (!FB_ON){ toast('서버 미연결 상태라 이 기기에서는 항상 기록할 수 있어요'); return; }
+  if (admin){
+    if (!confirm('이 기기에서 관리자 로그아웃할까요?')) return;
+    admin = false; applyAdmin(); if (cloud) await cloud.logout(); toast('로그아웃했어요'); return;
+  }
+  if (!cloud){ toast('서버에 연결된 뒤에 로그인할 수 있어요'); return; }
+  $('pinIn').value = ''; openSheet('sh-pin'); setTimeout(() => $('pinIn').focus(), 250);
+};
+async function doLogin(){
+  const pin = $('pinIn').value.trim(); if (!pin){ $('pinIn').focus(); return; }
+  $('pinGo').disabled = true;
+  const r = await cloud.login(pin);
+  $('pinGo').disabled = false;
+  if (r === 'ok'){ admin = true; hideSheet(); replaceTop(); applyAdmin(); toast('관리자로 로그인했어요'); migrateLocal(); }
+  else if (r === 'offline') toast('인터넷 연결을 확인해 주세요');
+  else { toast('비밀번호가 맞지 않아요'); $('pinIn').select(); }
+}
+$('pinGo').onclick = doLogin;
+$('pinIn').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+/* 대회 */
+$('newTourBtn').onclick = () => { tfEditing = null; nav('tourform'); setTimeout(() => $('tfName').focus(), 50); };
+$('editTourBtn').onclick = () => { tfEditing = curTour; nav('tourform'); };
+$('tfSave').onclick = () => {
+  const name = $('tfName').value.trim();
+  if (!name){ toast('대회명을 입력하세요'); $('tfName').focus(); return; }
+  const players = parseLines($('tfRoster').value);
+  if (!players.length){ toast('선수 명단을 입력하세요'); $('tfRoster').focus(); return; }
+  const m = MODES[tfMode];
+  if (tfEditing){
+    const t = tourOf(tfEditing);
+    const renamed = t.name !== name;
+    Object.assign(t, { name, home:$('tfHome').value.trim(), mode:m.mode, periods:m.periods, players });
+    putTour(t);
+    if (renamed) gamesOf(t.id).forEach(g => { g.setup.tour = name; putGame(g); });
+    toast('대회 설정을 저장했어요'); goBack();
+  } else {
+    const t = { id:newId(), name, home:$('tfHome').value.trim(), mode:m.mode, periods:m.periods, players, created:Date.now() };
+    putTour(t);
+    nav('tour', { tour:t.id, replace:true });
+    openAddSheet();
+  }
+};
+$('tfDelete').onclick = () => {
+  const t = tourOf(tfEditing); if (!t) return;
+  const n = gamesOf(t.id).length;
+  if (!confirm(`'${t.name}' 대회를 삭제할까요?${n ? `\n경기 ${n}개 기록도 모두 지워지고 되돌릴 수 없어요.` : ''}`)) return;
+  dropTour(t.id); tfEditing = null; toast('대회를 삭제했어요');
+  nav('home', { tour:null, replace:true });
+};
+
+/* 경기 추가 */
+function openAddSheet(){
+  const t = tourOf(curTour); if (!t) return;
+  $('addSub').textContent = `${t.name} · ${MODES[modeKey(t)].label} · ${t.home || '우리팀'} ${t.players.length}명`;
+  $('addAway').value = ''; $('addName').value = `${gamesOf(t.id).length + 1}경기`; $('addDate').value = today();
+  openSheet('sh-add'); setTimeout(() => $('addAway').focus(), 250);
+}
+$('addGameBtn').onclick = openAddSheet;
+$('nextGameBtn').onclick = () => goBack(openAddSheet);
+$('addAway').addEventListener('keydown', e => { if (e.key === 'Enter') $('addGo').click(); });
+$('addGo').onclick = () => {
+  const t = tourOf(curTour); if (!t) return;
+  const away = $('addAway').value.trim();
+  if (!away){ toast('상대팀 이름을 입력하세요'); $('addAway').focus(); return; }
+  const players = t.players.map((p,i) => ({ id:i+1, no:p.no, name:p.name }));
+  const g = {
+    code:genCode(), tourId:t.id, created:Date.now(), status:'live',
+    setup:{ tour:t.name, name:$('addName').value.trim() || `${gamesOf(t.id).length + 1}경기`, date:$('addDate').value || today(), mode:t.mode, periods:t.periods, home:t.home, away, players },
+    period:1, events:[], seq:0, pseq:players.length
+  };
+  putGame(g); hideSheet();
+  nav('live', { tour:t.id, game:g, replace:true });
+  toast(`경기 코드 #${g.code}`);
+};
+
+/* 경기 정보 수정 */
+function openGameSheet(){
+  const s = G.setup;
+  $('egSub').textContent = `#${G.code} · ${s.tour}`;
+  $('egAway').value = s.away; $('egName').value = s.name; $('egDate').value = s.date;
+  $('egRoster').value = s.players.map(p => `${p.no} ${p.name}`.trim()).join('\n');
+  openSheet('sh-game');
+}
+$('editGameBtn').onclick = openGameSheet;
+$('editGameBtn2').onclick = openGameSheet;
+$('egSave').onclick = () => {
+  const s = G.setup;
+  s.away = $('egAway').value.trim(); s.name = $('egName').value.trim(); s.date = $('egDate').value || s.date;
+  // 명단: 같은 번호+이름은 기존 id 유지, 기록 있는 선수는 빼지 않음
+  const used = new Set(), list = parseLines($('egRoster').value).map(x => {
+    const ex = s.players.find(p => p.no === x.no && p.name === x.name && !used.has(p.id));
+    const id = ex ? ex.id : ++G.pseq; used.add(id); return { id, no:x.no, name:x.name };
+  });
+  const hasEv = new Set(G.events.filter(e => e.pl != null).map(e => e.pl));
+  const kept = s.players.filter(p => hasEv.has(p.id) && !used.has(p.id));
+  if (kept.length) toast('기록이 있는 선수는 명단에서 빼지 않았어요');
+  s.players = [...list, ...kept];
+  putGame(G);
+  // 새로 추가된 선수는 대회 명단에도
+  const t = tourOf(G.tourId);
+  if (t){ let ch = false; list.forEach(x => { if (!t.players.some(p => p.no === x.no && p.name === x.name)){ t.players.push({ no:x.no, name:x.name }); ch = true; } }); if (ch) putTour(t); }
+  hideSheet(); replaceTop(); render(); toast('경기 정보를 저장했어요');
+};
+$('egDelete').onclick = () => {
+  if (!confirm(`#${G.code} 경기를 삭제할까요?\n기록이 모두 지워지고 되돌릴 수 없어요.`)) return;
+  const tid = G.tourId; dropGame(G.code); hideSheet();
+  nav('tour', { tour:tid, game:null, replace:true }); toast('경기를 삭제했어요');
+};
+
+/* 기록 화면 버튼 */
+$('undoBtn').onclick = () => {
+  const e = G.events.pop(); if (!e){ toast('되돌릴 기록이 없어요'); return; }
+  putGame(G); vib(); renderLive(); toast('되돌림: ' + desc(e));
+};
+$('liveBoxD').addEventListener('toggle', () => { if ($('liveBoxD').open) $('liveBoxA').innerHTML = boxHTML(); });
+$('finishBtn').onclick = () => { if (!confirm('경기를 종료하고 결과를 볼까요?')) return; G.status = 'done'; putGame(G); nav('result', { replace:true }); };
+$('reopenBtn').onclick = () => { G.status = 'live'; putGame(G); nav('live', { replace:true }); };
+$('copySum').onclick = () => copy(summaryText(), '결과를');
+$('copyTsv').onclick = () => copy(boxTSV(), '박스스코어를');
+
+/* ---------- 서버 데이터 반영 ---------- */
+function applyRemote(tours, games){
+  S = { tours, games };
+  if (G){ const fresh = S.games.find(g => g.code === G.code); if (fresh) G = fresh; else if (view === 'live' || view === 'result'){ toast('이 경기가 삭제됐어요'); G = null; restore({ v: curTour ? 'tour' : 'home', tour:curTour }); return; } }
+  if (view === 'tourform' || sheetOpen === 'sh-game') return;   // 입력 중엔 화면 유지
+  if (!admin && G && view === 'live' && G.status === 'done'){ view = 'result'; replaceTop(); }   // 보는 사람: 경기 끝나면 결과로
+  else if (!admin && G && view === 'result' && G.status !== 'done'){ view = 'live'; replaceTop(); }
+  render();
+}
+function migrateLocal(){
+  if (!cloud || !admin || localStorage.getItem(MIGRATED_KEY)) return;
+  const loc = loadLocal();
+  const tIds = new Set(S.tours.map(t => t.id)), gCodes = new Set(S.games.map(g => g.code));
+  let n = 0;
+  loc.tours.forEach(t => { if (!tIds.has(t.id)){ putTour(t); n++; } });
+  loc.games.forEach(g => { if (!gCodes.has(g.code)){ putGame(g); n++; } });
+  localStorage.setItem(MIGRATED_KEY, '1');
+  if (n) toast('이 기기에 있던 기록을 서버로 올렸어요');
+}
+
+/* ---------- 시작 ---------- */
+async function boot(){
+  history.replaceState({ v:'home' }, '');
+  if (!FB_ON){
+    S = loadLocal(); admin = true; setSync('local'); applyAdmin(); return;
+  }
+  admin = localStorage.getItem(ADMIN_KEY) === '1';
+  setSync('connecting'); applyAdmin();
+  try{
+    cloud = await createCloud(FIREBASE_CONFIG);
+    admin = await cloud.isAdmin(); applyAdmin();
+    let first = true;
+    cloud.subscribe((t, g) => { applyRemote(t, g); if (first){ first = false; migrateLocal(); } }, setSync);
+  }catch(e){ console.error(e); setSync('error'); }
+}
+boot();
+
+/* 홈 화면 앱 설치(오프라인 캐시) */
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

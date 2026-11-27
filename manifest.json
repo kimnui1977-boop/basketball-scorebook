@@ -1,0 +1,17 @@
+{
+  "name": "스코어북 · 농구 경기 기록",
+  "short_name": "스코어북",
+  "description": "농구 경기 라이브 기록기",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#13233A",
+  "theme_color": "#13233A",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 관리자 = 비번으로 admins/{uid} 문서를 만든 기기
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // 대회: 누구나 보기, 관리자만 쓰기
+    match /tournaments/{tourId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && request.resource.data.id == tourId;
+      allow delete: if isAdmin();
+    }
+
+    // 경기: 누구나 보기, 관리자만 쓰기 (문서 이름 = 6자리 코드)
+    match /games/{code} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && code.matches('^[0-9]{6}$')
+        && request.resource.data.code == code;
+      allow delete: if isAdmin();
+    }
+
+    // 관리자 로그인: 비번이 맞아야만 자기 문서를 만들 수 있음
+    // ▼ 비번 바꾸려면 아래 '0000'만 바꾸고 게시
+    match /admins/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['pin', 'at'])
+        && request.resource.data.pin == '0000';
+    }
+  }
+}
