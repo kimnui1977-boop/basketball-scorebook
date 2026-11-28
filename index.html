@@ -110,6 +110,29 @@ body.is-admin .view-only{display:none!important}
 .recordline{font-size:14px;color:var(--muted);margin-bottom:8px}
 .recordline b{color:var(--line);font-size:16px}
 
+/* 대회 전체 결과 */
+.tsum{padding:16px}
+.tres{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:14px}
+.tres span,.tmvp>span,.tstats span,.tlead span{display:block;font-size:12.5px;color:var(--muted);font-weight:600}
+.tres b{display:block;font-size:30px;font-weight:800;line-height:1.2;margin-top:2px}
+.tres b.win{color:var(--ball)}
+.tres b em{font-style:normal;font-size:17px;font-weight:600;color:var(--muted)}
+.tres p{font-size:14px;color:var(--muted);margin-top:6px;white-space:pre-wrap}
+.tstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.tstats b{display:block;font-size:24px;font-weight:700;margin-top:2px}
+.tstats b.pos{color:var(--make)} .tstats b.neg{color:var(--foul)}
+.tstats small{font-size:12px;color:var(--muted)}
+.tmvp{background:var(--court);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.tmvp .mvp{margin-top:6px}
+.tlead{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px;margin-bottom:14px}
+.tlead div{border-top:1px solid var(--rule);padding-top:8px;min-width:0}
+.tlead b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.tlead b i{font-style:normal;color:var(--muted);font-weight:600}
+.tlead em{font-style:normal;font-size:22px;font-weight:700;color:var(--ball)}
+.tbox{margin-top:4px}
+.tnote{font-size:12.5px;color:var(--muted);margin-top:10px}
+@media (max-width:560px){.tstats{grid-template-columns:repeat(2,minmax(0,1fr))}.tlead{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 /* 폼 */
 .field{margin-bottom:16px}
 .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
@@ -311,8 +334,8 @@ details[open]>summary{margin-bottom:10px}
   </div>
   <div class="tags" id="tourTags"></div>
   <div class="roster" id="tourRoster"></div>
-  <div class="recordline" id="tourRecord"></div>
-  <div class="list" id="tourGames"></div>
+  <div id="tourSummary"></div>
+  <div class="sec"><h2>경기</h2><div class="list" id="tourGames"></div></div>
   <div class="dock adm"><div class="in"><button class="btn primary" id="addGameBtn">경기 추가</button></div></div>
 </section>
 
@@ -413,6 +436,16 @@ details[open]>summary{margin-bottom:10px}
   <div class="field"><label for="egDate">날짜</label><input id="egDate" type="date"></div>
   <div class="field"><label for="egRoster">이 경기 선수 명단</label><textarea id="egRoster" style="min-height:140px"></textarea><div class="hint">선수를 추가하면 대회 명단에도 같이 추가돼요.</div></div>
   <div class="acts"><button class="btn danger" id="egDelete">경기 삭제</button><button class="btn primary" id="egSave">저장</button></div>
+</div>
+
+<div class="sheet" id="sh-tres" role="dialog" aria-label="대회 결과">
+  <h3>대회 결과</h3><div class="sub" id="trSub"></div>
+  <div class="field">
+    <label for="trResult">최종 결과</label><input id="trResult" placeholder="예: 우승, 8강, 예선 탈락" autocomplete="off">
+    <div class="chips"><button data-tr="우승">우승</button><button data-tr="준우승">준우승</button><button data-tr="3위">3위</button><button data-tr="4강">4강</button><button data-tr="8강">8강</button><button data-tr="16강">16강</button><button data-tr="예선 탈락">예선 탈락</button></div>
+  </div>
+  <div class="field"><label for="trMemo">메모 (선택)</label><textarea id="trMemo" style="min-height:110px" placeholder="예: 결승 연장 끝에 2점 차 승리"></textarea></div>
+  <div class="acts"><button class="btn primary" id="trSave">저장</button></div>
 </div>
 
 <div class="sheet" id="sh-pin" role="dialog" aria-label="관리자 로그인">
@@ -587,9 +620,10 @@ const foulGroup = p => is3() ? 0 : Math.min(p, N());
 function teamFouls(team){ const g = foulGroup(G.period); return G.events.filter(e => e.team === team && isFoul(e) && foulGroup(e.p) === g).length; }
 const touts = team => G.events.filter(e => e.team === team && e.k === 'tout').length;
 function emptyStats(){ const s = { pts:0, ftm:0, fta:0, reb:0 }; [1,2,3].forEach(v => { s['m'+v] = 0; s['a'+v] = 0; }); STAT.forEach(([k]) => s[k] = 0); return s; }
-function pstats(id){
+function pstats(id){ return gpstats(G, id); }
+function gpstats(g, id){
   const s = emptyStats();
-  for (const e of G.events){
+  for (const e of g.events){
     if (e.team !== 'H' || e.pl !== id) continue;
     if (e.k === 'shot'){
       if (e.ft){ s.fta++; if (e.made){ s.ftm++; s.pts += 1; } }
@@ -603,6 +637,78 @@ const fgm = s => shotVals().reduce((a,v) => a + s['m'+v], 0);
 const fga = s => shotVals().reduce((a,v) => a + s['a'+v], 0);
 const pct = (m,a) => a ? Math.round(m / a * 100) + '%' : '-';
 const eff = s => s.pts + s.reb + s.AST + s.STL + s.BLK - (fga(s) - fgm(s)) - (s.fta - s.ftm) - s.TO;
+// 모드 상관없이 쓰는 야투 (자유투는 ftm/fta 따로라 m1+m2+m3 = 야투)
+const gfgm = s => s.m1 + s.m2 + s.m3, gfga = s => s.a1 + s.a2 + s.a3;
+const geff = s => s.pts + s.reb + s.AST + s.STL + s.BLK - (gfga(s) - gfgm(s)) - (s.fta - s.ftm) - s.TO;
+const avg = (n, gp) => gp ? (Math.round(n / gp * 10) / 10).toFixed(1) : '0.0';
+
+/* ---------- 대회 전체 집계 (종료된 경기 기준) ---------- */
+function tourAgg(t){
+  const games = gamesOf(t.id).filter(g => g.status === 'done')
+    .sort((a,b) => (a.setup.date || '').localeCompare(b.setup.date || '') || (a.created||0) - (b.created||0));
+  const r = { w:0, l:0, d:0 }; let pf = 0, pa = 0;
+  const P = new Map();
+  games.forEach(g => {
+    pf += gScore(g,'H'); pa += gScore(g,'A'); r[gResult(g)]++;
+    g.setup.players.forEach(p => {
+      if (!g.events.some(e => e.team === 'H' && e.pl === p.id)) return;   // 기록이 있는 경기만 출전으로 셈
+      const key = `${p.no}|${p.name}`;
+      let x = P.get(key); if (!x){ x = { no:p.no, name:p.name, gp:0, s:emptyStats() }; P.set(key, x); }
+      x.gp++; const st = gpstats(g, p.id); Object.keys(x.s).forEach(k => x.s[k] += st[k]);
+    });
+  });
+  const players = [...P.values()].sort((a,b) => b.s.pts - a.s.pts || geff(b.s) - geff(a.s));
+  let mvp = null;
+  players.forEach(x => { const v = geff(x.s); if (!mvp || v > mvp.v || (v === mvp.v && x.s.pts > mvp.x.s.pts)) mvp = { x, v }; });
+  return { games, r, pf, pa, players, mvp: mvp && mvp.x };
+}
+const longShot = t => t.mode === '3x3' ? 2 : 3;   // 3x3은 2점이 외곽슛
+function tourLeaders(t, players){
+  const ls = longShot(t);
+  return [['pts','득점'], ['reb','리바운드'], ['AST','어시스트'], ['m' + ls, ls + '점슛'], ['STL','스틸'], ['BLK','블록']].map(([k,l]) => {
+    const top = [...players].sort((a,b) => b.s[k] - a.s[k])[0];
+    return top && top.s[k] > 0 ? { l, p:top, v:top.s[k] } : null;
+  }).filter(Boolean);
+}
+const mvpLine = x => `${x.gp}경기 평균 ${avg(x.s.pts, x.gp)}점 ${avg(x.s.reb, x.gp)}리바 ${avg(x.s.AST, x.gp)}어시`;
+function tourSummaryHTML(t){
+  const A = tourAgg(t), n = A.games.length;
+  const resultBox = `<div class="tres"><div><span>최종 결과</span><b class="${/우승/.test(t.result || '') && !/준우승/.test(t.result || '') ? 'win' : ''}">${t.result ? esc(t.result) : '<em>아직 입력 안 함</em>'}</b>${t.memo ? `<p>${esc(t.memo)}</p>` : ''}</div>
+    <button class="chipbtn adm" id="trEditBtn">결과 입력</button></div>`;
+  if (!n) return `<div class="panel tsum">${resultBox}<div class="tnote">경기를 종료하면 여기에 대회 전체 기록이 모여요.</div></div>`;
+  const diff = A.pf - A.pa, ls = longShot(t);
+  const stats = `<div class="tstats">
+      <div><span>전적</span><b>${recText(A.r) || '-'}</b></div>
+      <div><span>득점</span><b class="num">${A.pf}</b><small>평균 ${avg(A.pf, n)}</small></div>
+      <div><span>실점</span><b class="num">${A.pa}</b><small>평균 ${avg(A.pa, n)}</small></div>
+      <div><span>득실차</span><b class="num ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}">${diff > 0 ? '+' : ''}${diff}</b><small>${n}경기</small></div>
+    </div>`;
+  const m = A.mvp;
+  const mvp = m ? `<div class="tmvp"><span>대회 MVP</span><div class="mvp"><div class="n">${esc(m.no)}</div><div><b>${esc(m.name)}</b><span>${mvpLine(m)}</span></div></div></div>` : '';
+  const leaders = tourLeaders(t, A.players).map(x => `<div><span>${x.l}</span><b><i class="num">#${esc(x.p.no)}</i> ${esc(x.p.name)}</b><em class="num">${x.v}</em></div>`).join('');
+  const cols = [['#', x => x.no, 'l0'], ['이름', x => x.name, 'l'], ['경기', x => x.gp], ['득점', x => x.s.pts, 'b'], ['평균', x => avg(x.s.pts, x.gp)],
+    ['리바', x => x.s.reb], ['어시', x => x.s.AST], ['스틸', x => x.s.STL], ['블록', x => x.s.BLK],
+    [ls + '점', x => `${x.s['m'+ls]}/${x.s['a'+ls]}`], ['야투%', x => pct(gfgm(x.s), gfga(x.s))], ['자유투', x => `${x.s.ftm}/${x.s.fta}`], ['턴오버', x => x.s.TO], ['파울', x => x.s.PF]];
+  const table = `<table><tr>${cols.map(c => `<th class="${c[2] === 'l' ? 'l' : ''}">${c[0]}</th>`).join('')}</tr>${A.players.map(x => `<tr>${cols.map(c => `<td class="${c[2] === 'l' ? 'l' : ''}">${c[2] === 'b' ? '<b>' : ''}${esc(c[1](x))}${c[2] === 'b' ? '</b>' : ''}</td>`).join('')}</tr>`).join('')}</table>`;
+  return `<div class="panel tsum">${resultBox}${stats}${mvp}${leaders ? `<div class="tlead">${leaders}</div>` : ''}
+    <details class="tbox" ${document.body.classList.contains('pc') ? 'open' : ''}><summary>선수별 대회 누적 기록</summary><div class="tw">${table}</div></details>
+    <div class="tnote">종료된 경기 ${n}개 기준이에요.</div>
+    <button class="btn ghost" id="copyTourBtn" style="width:100%;margin-top:12px">대회 결과 복사</button></div>`;
+}
+function tourSummaryText(t){
+  const A = tourAgg(t), n = A.games.length, L = [];
+  L.push(`[${t.name}] 대회 결과`);
+  L.push(`${t.home || '우리팀'}${t.result ? ' — ' + t.result : ''}`);
+  if (n){
+    L.push(`전적 ${recText(A.r)} · 득점 ${A.pf} (평균 ${avg(A.pf, n)}) · 실점 ${A.pa} (평균 ${avg(A.pa, n)})`);
+    if (A.mvp) L.push(`MVP: #${A.mvp.no} ${A.mvp.name} — ${mvpLine(A.mvp)}`);
+    const ld = tourLeaders(t, A.players); if (ld.length) L.push(ld.map(x => `${x.l} #${x.p.no} ${x.p.name} ${x.v}`).join(' / '));
+    L.push('');
+    A.games.forEach(g => L.push(`${g.setup.name || '경기'} vs ${g.setup.away || '상대팀'} ${gScore(g,'H')}:${gScore(g,'A')} ${{w:'승',l:'패',d:'무'}[gResult(g)]}`));
+  }
+  if (t.memo){ L.push(''); L.push(t.memo); }
+  return L.join('\n');
+}
 function sumStats(list){ const t = emptyStats(); list.forEach(s => Object.keys(t).forEach(k => t[k] += s[k])); return t; }
 function statLine(s){ let t = `${s.pts}점 ${s.reb}리바 ${s.AST}어시`; if (s.STL) t += ` ${s.STL}스틸`; if (s.BLK) t += ` ${s.BLK}블록`; return t; }
 function mvp(){
@@ -754,7 +860,7 @@ function gameRow(g, showTour){
   </button>`;
 }
 function tourRow(t){
-  const n = gamesOf(t.id).length, r = recText(recordOf(t.id));
+  const n = gamesOf(t.id).length, r = [t.result, recText(recordOf(t.id))].filter(Boolean).join(' · ');
   return `<button class="row" data-tour="${t.id}">
     <div class="main">
       <div class="t">${esc(t.name)}</div>
@@ -794,8 +900,8 @@ function renderTour(){
   $('tourName').textContent = t.name;
   $('tourTags').innerHTML = `<span class="tag o">${esc(t.home || '우리팀')}</span><span class="tag">${MODES[modeKey(t)].label}</span><span class="tag">명단 ${t.players.length}명</span>`;
   $('tourRoster').innerHTML = t.players.map(p => `<span><b>${esc(p.no || '-')}</b>${esc(p.name)}</span>`).join('');
-  const r = recordOf(t.id), gs = gamesOf(t.id);
-  $('tourRecord').innerHTML = recText(r) ? `전적 <b>${recText(r)}</b>` : '';
+  const gs = gamesOf(t.id);
+  $('tourSummary').innerHTML = tourSummaryHTML(t);
   $('tourGames').innerHTML = gs.map(g => gameRow(g, false)).join('') ||
     `<div class="empty"><b>아직 경기가 없어요</b>${canWrite() ? "아래 '경기 추가'를 눌러 첫 경기를 기록하세요." : ''}</div>`;
 }
@@ -943,6 +1049,9 @@ document.addEventListener('click', ev => {
   if (d.game){ const g = S.games.find(x => x.code === d.game); if (g) openGame(g); return; }
   if (d.copy){ const t = tourOf(d.copy); if (t){ $('tfRoster').value = t.players.map(p => `${p.no} ${p.name}`.trim()).join('\n'); if (!$('tfHome').value) $('tfHome').value = t.home; toast(`${t.name} 명단을 가져왔어요`); } return; }
   if (d.mode && b.closest('#tfMode')){ setTfMode(d.mode); return; }
+  if (d.tr){ $('trResult').value = d.tr; return; }
+  if (b.id === 'trEditBtn'){ openTourResult(); return; }
+  if (b.id === 'copyTourBtn'){ const t = tourOf(curTour); if (t) copy(tourSummaryText(t), '대회 결과를'); return; }
   if (d.nm){ const base = d.nm; let v = base; if (base === '예선'){ const k = gamesOf(curTour).filter(g => (g.setup.name || '').startsWith('예선')).length + 1; v = `예선 ${k}경기`; } $('addName').value = v; return; }
   if (!canWrite() || !G) return;
   if (d.per){ changePeriod(+d.per); return; }
@@ -1182,6 +1291,20 @@ $('tfDelete').onclick = () => {
   nav('home', { tour:null, replace:true });
 };
 
+/* 대회 결과 입력 */
+function openTourResult(){
+  const t = tourOf(curTour); if (!t || !canWrite()) return;
+  $('trSub').textContent = `${t.name} · ${t.home || '우리팀'}`;
+  $('trResult').value = t.result || ''; $('trMemo').value = t.memo || '';
+  openSheet('sh-tres'); setTimeout(() => $('trResult').focus(), 250);
+}
+$('trSave').onclick = () => {
+  const t = tourOf(curTour); if (!t) return;
+  t.result = $('trResult').value.trim(); t.memo = $('trMemo').value.trim();
+  putTour(t); hideSheet(); replaceTop(); render(); toast('대회 결과를 저장했어요');
+};
+$('trResult').addEventListener('keydown', e => { if (e.key === 'Enter') $('trSave').click(); });
+
 /* 경기 추가 */
 function openAddSheet(){
   const t = tourOf(curTour); if (!t) return;
@@ -1266,7 +1389,7 @@ function applyRemote(tours, games){
   lastSig = sig;
   S = { tours, games };
   if (G){ const fresh = S.games.find(g => g.code === G.code); if (fresh) G = fresh; else if (view === 'live' || view === 'result'){ toast('이 경기가 삭제됐어요'); G = null; restore({ v: curTour ? 'tour' : 'home', tour:curTour }); return; } }
-  if (view === 'tourform' || sheetOpen === 'sh-game') return;   // 입력 중엔 화면 유지
+  if (view === 'tourform' || sheetOpen === 'sh-game' || sheetOpen === 'sh-tres') return;   // 입력 중엔 화면 유지
   if (!canWrite() && G && view === 'live' && G.status === 'done'){ view = 'result'; replaceTop(); }   // 보는 사람: 경기 끝나면 결과로
   else if (!canWrite() && G && view === 'result' && G.status !== 'done'){ view = 'live'; replaceTop(); }
   render();
