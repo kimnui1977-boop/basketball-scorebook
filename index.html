@@ -265,6 +265,16 @@ details[open]>summary{margin-bottom:10px}
 .mvp b{font-size:17px;display:block}
 .mvp span{color:var(--muted);font-size:14px}
 
+/* 경기 코드 전체 화면 (카메라 촬영용) */
+.codefs{position:fixed;inset:0;z-index:90;background:var(--court);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4vh 4vw;cursor:pointer;user-select:none}
+.codefs.on{display:flex}
+.codefs .cf-tour{font-size:clamp(20px,3.6vw,46px);font-weight:700;color:var(--muted);margin-bottom:1vh}
+.codefs .cf-code{font-family:var(--num);font-weight:700;line-height:.9;font-size:min(24vw,40vh);color:var(--line);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.codefs .cf-code i{font-style:normal;color:var(--ball);margin-right:.04em}
+.codefs .cf-match{font-size:clamp(26px,5vw,68px);font-weight:800;margin-top:2vh}
+.codefs .cf-match .h{color:var(--ball)} .codefs .cf-match .a{color:var(--away)} .codefs .cf-match .v{color:var(--muted);font-weight:500;margin:0 .35em}
+.codefs .cf-meta{font-size:clamp(16px,2.6vw,34px);color:var(--muted);margin-top:1.2vh}
+.codefs .cf-hint{position:absolute;bottom:2.5vh;left:0;right:0;font-size:13px;color:#4A6488}
 .toast{position:fixed;left:50%;bottom:calc(92px + var(--safe-b));transform:translate(-50%,10px);background:var(--line);color:var(--court);padding:11px 18px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;z-index:60;max-width:88vw;text-align:center}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 @media (min-width:700px){.wrap{padding-left:24px;padding-right:24px}}
@@ -337,6 +347,7 @@ details[open]>summary{margin-bottom:10px}
   <div class="top">
     <button class="iconbtn" data-back aria-label="뒤로">‹</button>
     <div class="ttl"><b id="liveTitle"></b><small><span class="code" id="liveCode"></span> <span id="liveTour"></span></small></div>
+    <button class="chipbtn codeFsBtn">코드 화면</button>
     <button class="chipbtn pcToggle">컴퓨터 모드</button>
     <button class="chipbtn adm" id="editGameBtn">경기 정보</button>
   </div>
@@ -368,6 +379,7 @@ details[open]>summary{margin-bottom:10px}
   <div class="top">
     <button class="iconbtn" data-back aria-label="뒤로">‹</button>
     <div class="ttl"><b id="resTitle"></b><small><span class="code" id="resCode"></span> <span id="resTour"></span></small></div>
+    <button class="chipbtn codeFsBtn">코드 화면</button>
     <button class="chipbtn adm" id="editGameBtn2">경기 정보</button>
   </div>
   <div class="panel final" id="final"></div>
@@ -407,6 +419,14 @@ details[open]>summary{margin-bottom:10px}
   <h3>관리자 로그인</h3><div class="sub">로그인하면 이 기기에서 경기를 추가하고 기록할 수 있어요.</div>
   <div class="field"><label for="pinIn">관리자 비밀번호</label><input id="pinIn" type="password" inputmode="numeric" autocomplete="off" enterkeyhint="go"></div>
   <div class="acts"><button class="btn primary" id="pinGo">로그인</button></div>
+</div>
+
+<div class="codefs" id="codeFs" role="dialog" aria-label="경기 코드 전체 화면">
+  <div class="cf-tour" id="cfTour"></div>
+  <div class="cf-code" id="cfCode"></div>
+  <div class="cf-match" id="cfMatch"></div>
+  <div class="cf-meta" id="cfMeta"></div>
+  <div class="cf-hint">화면을 누르거나 Esc를 누르면 닫혀요</div>
 </div>
 
 <div class="toast" id="toast" role="status"></div>
@@ -694,7 +714,12 @@ function openSheet(id){
   sheetOpen = id; $(id).classList.add('on'); $('scrim').classList.add('on');
   const s = { ...stateNow(), sheet:id }; history.pushState(s, ''); stack.push(s);
 }
-function hideSheet(){ if (!sheetOpen) return; $(sheetOpen).classList.remove('on'); $('scrim').classList.remove('on'); sheetOpen = null; document.activeElement && document.activeElement.blur(); }
+function hideSheet(){
+  if (!sheetOpen) return;
+  const was = sheetOpen;
+  $(sheetOpen).classList.remove('on'); $('scrim').classList.remove('on'); sheetOpen = null; document.activeElement && document.activeElement.blur();
+  if (was === 'codeFs'){ try{ if (document.fullscreenElement) document.exitFullscreen(); }catch(e){} syncWake(); }
+}
 function closeSheet(){ if (sheetOpen) history.back(); }
 $('scrim').onclick = closeSheet;
 
@@ -1073,10 +1098,28 @@ document.addEventListener('click', ev => {
 });
 if (pcAuto.addEventListener) pcAuto.addEventListener('change', applyPc);
 
+/* ---------- 경기 코드 전체 화면 (카메라에 비추는 용도) ---------- */
+function openCodeFs(){
+  if (!G) return;
+  const s = G.setup;
+  $('cfTour').textContent = s.tour || '';
+  $('cfCode').innerHTML = `<i>#</i>${esc(G.code)}`;
+  $('cfMatch').innerHTML = `<span class="h">${esc(s.home || '우리팀')}</span><span class="v">vs</span><span class="a">${esc(s.away || '상대팀')}</span>`;
+  $('cfMeta').textContent = [s.name, s.date].filter(Boolean).join('  ·  ');
+  openSheet('codeFs');
+  const el = $('codeFs');
+  try{ const r = el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen && el.webkitRequestFullscreen(); if (r && r.catch) r.catch(() => {}); }catch(e){}
+  syncWake();
+}
+document.addEventListener('click', ev => { if (ev.target.closest('.codeFsBtn')) openCodeFs(); });
+$('codeFs').addEventListener('click', () => closeSheet());
+// 브라우저 전체화면이 Esc 등으로 풀리면 코드 화면도 닫기
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sheetOpen === 'codeFs') closeSheet(); });
+
 /* ---------- 경기 중 화면 꺼짐 방지 ---------- */
 let wake = null;
 async function syncWake(){
-  const want = view === 'live' && canWrite() && G && G.status !== 'done' && document.visibilityState === 'visible';
+  const want = document.visibilityState === 'visible' && (sheetOpen === 'codeFs' || (view === 'live' && canWrite() && G && G.status !== 'done'));
   try{
     if (want && !wake && navigator.wakeLock){ wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
     else if (!want && wake){ const w = wake; wake = null; await w.release(); }
